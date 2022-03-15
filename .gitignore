@@ -21,6 +21,7 @@ data/coverage_report
 .coverage
 .pytest_cache
 htmlcov
+coverage.xml
 
 *.local
 LOCAL_NOTES.md

@@ -22,6 +22,9 @@ data/coverage_report
 .pytest_cache
 htmlcov
 coverage.xml
+build
+dist
+**/*.egg-info
 
 *.local
 LOCAL_NOTES.md

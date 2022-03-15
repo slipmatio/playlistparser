@@ -35,3 +35,6 @@ jobs:
 
       - name: Test
         run: pytest
+
+      - name: Coverage
+        run: pytest --cov=src/playlistparser --cov-report term

@@ -52,9 +52,6 @@ class PlaylistParser(object):
         raise Exception(f"Unknown playlist type when opening {self.file_path} ")
 
     def parse(self):
-        """
-        Returns True, False or Exception
-        """
         if self.verbose:  # pragma: no cover
             print("Parsing...")
         if self._parser is not None:

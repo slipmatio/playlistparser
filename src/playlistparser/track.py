@@ -1,5 +1,6 @@
 from datetime import timedelta
 from typing import Dict, Union
+from unicodedata import normalize
 
 
 class Track(object):
@@ -12,8 +13,8 @@ class Track(object):
         year: str = "",
         bpm: int = 0,
     ):
-        self.title = title
-        self.artist = artist
+        self.title = normalize("NFC", title)
+        self.artist = normalize("NFC", artist)
         self.duration = duration
         self.year = self._clean_year(year)
         self.bpm = bpm

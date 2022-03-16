@@ -2,10 +2,10 @@ from os.path import join
 from pathlib import Path
 
 import pytest
+from playlistparser import PlaylistParser
+from playlistparser.track import Track
+from playlistparser.utils import time_str_to_seconds
 from pytest import approx
-from src.playlistparser import PlaylistParser
-from src.playlistparser.track import Track
-from src.playlistparser.utils import time_str_to_seconds
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 

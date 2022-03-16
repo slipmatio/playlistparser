@@ -1,4 +1,4 @@
-from src.playlistparser.track import Track
+from playlistparser.track import Track
 
 
 def test_song_class():

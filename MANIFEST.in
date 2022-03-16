@@ -1,0 +1,7 @@
+include README.md
+include LICENSE.md
+
+include src/playlistparser/*.py
+include src/playlistparser/parsers/*.py
+
+recursive-exclude .git *

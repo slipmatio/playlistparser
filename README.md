@@ -1,6 +1,8 @@
 # Playlistparser
 
-Tool for parsing DJ software playlists. Part of [Slipmat.io](https://slipmat.io) tools.
+Tool for parsing DJ software playlists. Currently supports Engine DJ, Rekordbox, Serato, Traktor, and VirtualDJ. Part of [Slipmat.io](https://slipmat.io) tools.
+
+Live demo of this parser in action: [https://playlists.slipmat.io](https://playlists.slipmat.io)
 
 ## Contributing
 

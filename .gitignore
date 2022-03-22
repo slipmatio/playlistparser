@@ -28,3 +28,4 @@ dist
 
 *.local
 LOCAL_NOTES.md
+parse.py

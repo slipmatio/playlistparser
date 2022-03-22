@@ -5,6 +5,7 @@ from .parsers.engine import parser as engine_parser
 from .parsers.rekordbox import parser as rekordbox_parser
 from .parsers.serato import parser as serato_parser
 from .parsers.traktor import parser as traktor_parser
+from .parsers.virtualdj import parser as virtualdj_parser
 from .track import Track
 
 
@@ -42,6 +43,13 @@ class PlaylistParser(object):
             with open(self.file_path) as file:
                 reader = DictReader(file)
                 line = reader.__next__()
+                if self.verbose:  # pragma: no cover
+                    print("First line: ", line)
+
+                if "\ufeffsep=" in line.keys():
+                    self._parser = virtualdj_parser
+                    return "virtualdj"
+
                 if "#" in line.keys():
                     self._parser = engine_parser
                     return "engine"
@@ -66,4 +74,4 @@ class PlaylistParser(object):
         return self.tracks
 
 
-__version__ = "3.0.0-beta.3"
+__version__ = "3.0.0-beta.4"

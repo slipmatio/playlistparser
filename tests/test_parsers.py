@@ -3,8 +3,6 @@ from pathlib import Path
 
 import pytest
 from playlistparser import PlaylistParser
-from playlistparser.track import Track
-from playlistparser.utils import time_str_to_seconds
 from pytest import approx
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -128,45 +126,3 @@ def test_all():
         assert approx(rb_song.duration, abs=1) == en_song.duration
         assert approx(rb_song.duration, abs=1) == tr_song.duration
         assert approx(rb_song.duration, abs=1) == vr_song.duration
-
-
-def test_utils():
-    assert time_str_to_seconds("00:00:00") == 0
-    assert time_str_to_seconds("00:00:10") == 10
-    assert time_str_to_seconds("00:01:00") == 60
-    assert time_str_to_seconds("00:10:00") == 600
-    assert time_str_to_seconds("01:00:00") == 3600
-    assert time_str_to_seconds("foo") == 0
-
-
-def test_song_class():
-    song = Track(title="test title", artist="test artist", year="2022", duration=10)
-    assert song.title == "test title"
-    assert song.year == 2022
-    assert song.duration_str() == "0:10"
-    assert str(song) == "test artist - test title"
-
-    song = Track(title="test", artist="test", year="2022", duration=0)
-    assert song.duration_str() == "0:00"
-
-    song = Track(title="test", artist="test", year="2022-1-1", duration=60)
-    assert song.duration_str() == "1:00"
-    assert song.year == 2022
-
-    song = Track(title="test", artist="test", year="2022/1/1", duration=360)
-    assert song.duration_str() == "6:00"
-    assert song.year == 2022
-
-    song = Track(title="test", artist="test", year="2022/1/1", duration=3600)
-    assert song.duration_str() == "1:00:00"
-
-    song = Track(
-        title="test",
-        artist="test",
-        year="2022/1/1",
-        duration=2 * 3600 + 45 * 60 + 15,
-        bpm=100,
-    )
-    assert song.duration_str() == "2:45:15"
-    assert len(song.as_dict().keys()) == 6
-    assert len(song.as_dict(no_meta=True).keys()) == 2

@@ -13,8 +13,8 @@ class Track(object):
         year: str = "",
         bpm: int = 0,
     ):
-        self.title = normalize("NFC", title)
-        self.artist = normalize("NFC", artist)
+        self.title = normalize("NFC", title).strip()
+        self.artist = normalize("NFC", artist).strip()
         self.duration = duration
         self.year = self._clean_year(year)
         self.bpm = bpm

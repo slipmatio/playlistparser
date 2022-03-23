@@ -32,3 +32,20 @@ def test_song_class():
     assert song.duration_str() == "2:45:15"
     assert len(song.as_dict().keys()) == 6
     assert len(song.as_dict(no_meta=True).keys()) == 2
+
+
+def test_meta_cleanupp():
+    track = Track(title="  test title  ", artist="test artist", year="2022", duration=10)
+    assert track.title == "test title"
+
+    track = Track(title="test title", artist="  test artist  ", year="2022", duration=10)
+    assert track.artist == "test artist"
+
+    track1 = Track(title="  test é  ", artist="artist", year="2022", duration=10)
+    # b'\xc3\xa9'
+    track2 = Track(title="test é", artist="artist", year="2022", duration=10)
+    assert track1.title == track2.title
+
+    track3 = Track(title="test", artist="artist é", year="2022", duration=10)
+    track4 = Track(title="test", artist="  artist é  ", year="2022", duration=10)
+    assert track3.artist == track4.artist

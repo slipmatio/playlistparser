@@ -9,7 +9,7 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 
 BROKEN_FILE = join(ROOT_DIR, "data/brokentestfile.dat")
 FIVE_ARTISTS = join(ROOT_DIR, "data/TestList5Artists.txt")
-HUNDRED_TRACKS = join(ROOT_DIR, "data/TestList100Tracks.txt")
+HUNDRED_TRACKS = join(ROOT_DIR, "data/TestList100tracks.txt")
 
 verbose = False
 

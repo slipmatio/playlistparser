@@ -12,12 +12,14 @@ class Track(object):
         duration: int = 0,
         year: str = "",
         bpm: int = 0,
+        file_path: str = "",
     ):
         self.title = normalize("NFC", title).strip()
         self.artist = normalize("NFC", artist).strip()
         self.duration = duration
         self.year = self._clean_year(year)
         self.bpm = bpm
+        self.file_path = file_path
 
     def __str__(self):
         return f"{self.artist} - {self.title}"
@@ -68,4 +70,6 @@ class Track(object):
             song["year"] = self.year
         if self.bpm:
             song["bpm"] = self.bpm
+        if self.file_path:
+            song["file_path"] = self.file_path
         return song

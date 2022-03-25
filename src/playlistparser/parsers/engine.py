@@ -11,6 +11,8 @@ def parser(file_path, *, verbose=False):
     - year
     - playtime
     - bpm
+    - bpm
+    - file_path
     """
     with open(file_path) as file:
         reader = csv.DictReader(file)
@@ -24,8 +26,16 @@ def parser(file_path, *, verbose=False):
                 year = line["Year"].strip()
                 bpm = int(line["BPM"].strip())
                 playtime = int(line["Length"].strip())
+                file_path = line["File name"].strip()
                 tracks.append(
-                    Track(title=title, artist=artist, year=year, duration=playtime, bpm=bpm)
+                    Track(
+                        title=title,
+                        artist=artist,
+                        year=year,
+                        duration=playtime,
+                        bpm=bpm,
+                        file_path=file_path,
+                    )
                 )
             except Exception as e:  # pragma: no cover
                 print(f"Skipping line {counter}", e)

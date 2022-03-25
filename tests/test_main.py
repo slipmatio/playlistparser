@@ -31,6 +31,7 @@ def test_utils():
 
 def test_num_artists():
     parser = PlaylistParser(FIVE_ARTISTS, verbose=verbose)
+    parser.parse()
     tracks = parser.get_tracks()
     assert len(tracks) == 100
     artists = set()

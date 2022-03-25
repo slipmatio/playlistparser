@@ -14,6 +14,7 @@ def parser(file_path, *, verbose=False):
     - year
     - playtime
     - bpm
+    - file_path
     """
     with open(file_path, "rb") as handle, codecs.EncodedFile(
         handle, data_encoding="utf-8", file_encoding="utf-16", errors="ignore"
@@ -25,17 +26,36 @@ def parser(file_path, *, verbose=False):
         counter = 0
 
         for line in reader:
+            title = ""
+            artist = ""
+            year = ""
+            bpm = 0
+            file_path = ""
+
             try:
                 title = line["Track Title"].strip()
                 artist = line["Artist"].strip()
                 year = line["Year"].strip()
                 bpm = int(float(line["BPM"].strip()))
                 playtime = time_str_to_seconds(line["Time"].strip())
-                tracks.append(
-                    Track(title=title, artist=artist, year=year, duration=playtime, bpm=bpm)
-                )
             except Exception as e:  # pragma: no cover
                 print(f"Skipping line {counter}", e)
+                continue
 
+            try:
+                file_path = line["Location"].strip()
+            except Exception:
+                pass
+
+            tracks.append(
+                Track(
+                    title=title,
+                    artist=artist,
+                    year=year,
+                    duration=playtime,
+                    bpm=bpm,
+                    file_path=file_path,
+                )
+            )
             counter += 1
         return tracks

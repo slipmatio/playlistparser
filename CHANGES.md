@@ -1,6 +1,10 @@
 # Changelog
 
-## 3.0.0-beta.4 (2022-03-22)
+## 3.0.0-beta.6 (2022-03-25)
+
+- Feat: added ability to parse file paths from Rekordbox and Engine playlists. (In #5)
+
+## 3.0.0-beta.5 (2022-03-22)
 
 - Fix: clean track title and artist. (In #4)
 

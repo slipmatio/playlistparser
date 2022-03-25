@@ -28,7 +28,7 @@ def test_engine():
     tracks = parser.get_tracks()
     track = tracks[0]
     assert len(tracks) == 4
-    assert len(track.as_dict().keys()) == 6
+    assert len(track.as_dict().keys()) == 7
     assert "year" in track.as_dict().keys()
 
 
@@ -37,7 +37,7 @@ def test_rekordbox():
     tracks = parser.get_tracks()
     track = tracks[0]
     assert len(tracks) == 4
-    assert len(track.as_dict().keys()) == 6
+    assert len(track.as_dict().keys()) == 7
     assert "year" in track.as_dict().keys()
 
 
@@ -89,11 +89,13 @@ def test_all():
     vr_tracks = vr_parser.get_tracks()
     vr_song_0_dict = vr_tracks[0].as_dict()
 
-    assert set(rb_song_0_dict.keys()).difference(set(en_song_0_dict.keys())) == set()
-    assert set(rb_song_0_dict.keys()).difference(set(tr_song_0_dict.keys())) == set()
-    assert set(rb_song_0_dict.keys()).difference(set(vr_song_0_dict.keys())) == set()
+    assert (
+        set(rb_song_0_dict.keys()).difference(set(en_song_0_dict.keys())) == set()
+    ), "Rekordbox keys should be identical to Engine keys"
+    assert set(rb_song_0_dict.keys()).difference(set(tr_song_0_dict.keys())) == set({"file_path"})
+    assert set(rb_song_0_dict.keys()).difference(set(vr_song_0_dict.keys())) == set({"file_path"})
     assert set(en_song_0_dict.keys()).difference(set(se_song_0_dict.keys())) == set(
-        {"bpm", "duration", "duration_str"}
+        {"bpm", "duration", "duration_str", "file_path"}
     )
 
     assert len(rb_tracks) == len(en_tracks), "Rekordbox and Engine have different number of tracks"
@@ -105,12 +107,12 @@ def test_all():
     assert len(en_song_0_dict.keys()) == len(
         rb_song_0_dict.keys()
     ), "Engine and Rekordbox have different keys"
-    assert len(en_song_0_dict.keys()) == len(
-        tr_song_0_dict.keys()
-    ), "Engine and Traktor have different keys"
-    assert len(en_song_0_dict.keys()) == len(
-        vr_song_0_dict.keys()
-    ), "Engine and VDJ have different keys"
+    # assert len(en_song_0_dict.keys()) == len(
+    #     tr_song_0_dict.keys()
+    # ), "Engine and Traktor have different keys"
+    # assert len(en_song_0_dict.keys()) == len(
+    #     vr_song_0_dict.keys()
+    # ), "Engine and VDJ have different keys"
 
     for index, rb_song in enumerate(rb_tracks):
         en_song = en_tracks[index]

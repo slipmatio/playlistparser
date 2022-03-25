@@ -62,11 +62,10 @@ class PlaylistParser(object):
     def parse(self):
         if self.verbose:  # pragma: no cover
             print("Parsing...")
-        if self._parser is not None:
-            self.tracks = self._parser(self.file_path, verbose=self.verbose)  # type: ignore
-            self.is_parsed = True
-            if self.verbose:  # pragma: no cover
-                print(f"Found {len(self.tracks)} tracks.")
+        self.tracks = self._parser(self.file_path, verbose=self.verbose)  # type: ignore
+        self.is_parsed = True
+        if self.verbose:  # pragma: no cover
+            print(f"Found {len(self.tracks)} tracks.")
 
     def get_tracks(self):
         if not self.is_parsed:

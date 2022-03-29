@@ -35,6 +35,7 @@ def test_engine():
     assert len(tracks) == 4
     assert len(track.as_dict().keys()) == 7
     assert "year" in track.as_dict().keys()
+    assert tracks[2].artist == "Unknown Artist"
 
 
 def test_rekordbox():
@@ -44,6 +45,7 @@ def test_rekordbox():
     assert len(tracks) == 4
     assert len(track.as_dict().keys()) == 7
     assert "year" in track.as_dict().keys()
+    assert tracks[2].artist == "Unknown Artist"
 
 
 def test_serato():
@@ -53,6 +55,7 @@ def test_serato():
     assert len(tracks) == 4
     assert len(track.as_dict().keys()) == 3
     assert "year" in track.as_dict().keys()
+    assert tracks[2].artist == "Unknown Artist"
 
 
 def test_traktor():
@@ -62,6 +65,7 @@ def test_traktor():
     assert len(tracks) == 4
     assert len(track.as_dict().keys()) == 6
     assert "year" in track.as_dict().keys()
+    assert tracks[2].artist == "Unknown Artist"
 
 
 def test_virtualdj():
@@ -71,6 +75,7 @@ def test_virtualdj():
     assert len(tracks) == 4
     assert len(track.as_dict().keys()) == 6
     assert "year" in track.as_dict().keys()
+    assert tracks[2].artist == "Unknown Artist"
 
 
 def test_all():

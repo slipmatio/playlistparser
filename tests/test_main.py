@@ -11,6 +11,12 @@ BROKEN_FILE = join(ROOT_DIR, "data/brokentestfile.dat")
 FIVE_ARTISTS = join(ROOT_DIR, "data/TestList5Artists.txt")
 HUNDRED_TRACKS = join(ROOT_DIR, "data/TestList100tracks.txt")
 
+ENGINE_FILE = join(ROOT_DIR, "data/enginedj-v21.csv")
+REKORDBOX_FILE = join(ROOT_DIR, "data/rekordbox-v6.txt")
+SERATO_FILE = join(ROOT_DIR, "data/serato-v25.csv")
+TRAKTOR_FILE = join(ROOT_DIR, "data/traktor-v35.nml")
+VIRTUALDJ_FILE = join(ROOT_DIR, "data/virtualdj-v2021.csv")
+
 verbose = False
 
 
@@ -48,3 +54,23 @@ def test_num_tracks():
     for track in tracks:
         artists.add(track.artist)
     assert len(artists) == 81
+
+
+@pytest.mark.parametrize(
+    "file_name",
+    [
+        ENGINE_FILE,
+        REKORDBOX_FILE,
+        SERATO_FILE,
+        TRAKTOR_FILE,
+        VIRTUALDJ_FILE,
+    ],
+)
+def test_default_artist(file_name):
+    parser = PlaylistParser(file_name, verbose=verbose)
+    tracks = parser.get_tracks()
+    assert tracks[2].artist == "Unknown Artist"
+
+    parser = PlaylistParser(file_name, default_artist="Default", verbose=verbose)
+    tracks = parser.get_tracks()
+    assert tracks[2].artist == "Default"

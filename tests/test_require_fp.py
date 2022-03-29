@@ -17,10 +17,13 @@ verbose = False
 
 def test_not_implemented():
     with pytest.raises(NotImplementedError):
-        PlaylistParser(SERATO_FILE, require_fp=True, verbose=verbose)
+        parser = PlaylistParser(SERATO_FILE, require_fp=True, verbose=verbose)
+        parser.parse()
 
     with pytest.raises(NotImplementedError):
-        PlaylistParser(TRAKTOR_FILE, require_fp=True, verbose=verbose)
+        parser = PlaylistParser(TRAKTOR_FILE, require_fp=True, verbose=verbose)
+        parser.parse()
 
     with pytest.raises(NotImplementedError):
-        PlaylistParser(VIRTUALDJ_FILE, require_fp=True, verbose=verbose)
+        parser = PlaylistParser(VIRTUALDJ_FILE, require_fp=True, verbose=verbose)
+        parser.parse()

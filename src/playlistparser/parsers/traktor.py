@@ -12,6 +12,9 @@ def parser(file_path, *, require_fp=False, verbose=False):
     - playtime
     - bpm
     """
+    if require_fp:
+        raise NotImplementedError("Traktor parser doesn't support file paths.")
+
     tracks = []
     traktor_xml = ""
     counter = 0

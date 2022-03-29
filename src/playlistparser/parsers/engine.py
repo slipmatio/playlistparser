@@ -7,8 +7,9 @@ def parser(
     file_path,
     *,
     require_title=True,
-    require_bpm=False,
+    require_duration=False,
     require_year=False,
+    require_bpm=False,
     require_fp=False,
     verbose=False,
 ):

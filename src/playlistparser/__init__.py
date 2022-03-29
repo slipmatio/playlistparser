@@ -14,15 +14,14 @@ class PlaylistParser(object):
         self,
         file_path=None,
         *,
-        file_obj=None,
         require_title=True,
-        require_bpm=False,
+        require_duration=False,
         require_year=False,
+        require_bpm=False,
         require_fp=False,
         verbose=False,
     ):
         self.file_path = file_path
-        self.file_obj = file_obj
         self.file_contents = None
         self.verbose = verbose
         self.playlist_type = "none"
@@ -31,6 +30,7 @@ class PlaylistParser(object):
         self._parser: Union[Callable[[str], List], None] = None
         self.is_parsed = False
         self.require_title = require_title
+        self.require_duration = require_duration
         self.require_bpm = require_bpm
         self.require_year = require_year
         self.require_fp = require_fp
@@ -79,6 +79,7 @@ class PlaylistParser(object):
         self.tracks = self._parser(
             self.file_path,
             require_title=self.require_title,  # type: ignore
+            require_duration=self.require_duration,  # type: ignore
             require_bpm=self.require_bpm,  # type: ignore
             require_year=self.require_year,  # type: ignore
             require_fp=self.require_fp,  # type: ignore

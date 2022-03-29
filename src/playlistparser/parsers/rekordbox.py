@@ -10,8 +10,9 @@ def parser(
     file_path,
     *,
     require_title=True,
-    require_bpm=False,
+    require_duration=False,
     require_year=False,
+    require_bpm=False,
     require_fp=False,
     verbose=False,
 ):
@@ -34,27 +35,44 @@ def parser(
         counter = 0
 
         for line in reader:
-            title = ""
             artist = ""
+            title = "Unknown"
+            playtime = 0
             year = ""
             bpm = 0
             file_path = ""
 
             try:
                 title = line["Track Title"].strip()
-                artist = line["Artist"].strip()
-                year = line["Year"].strip()
-                bpm = int(float(line["BPM"].strip()))
+            except KeyError:
+                if require_title:
+                    raise ValueError("Title required but not found in file.")
+
+            try:
                 playtime = time_str_to_seconds(line["Time"].strip())
-            except Exception as e:  # pragma: no cover
-                print(f"Skipping line {counter}", e)
-                continue
+            except KeyError:
+                if require_duration:
+                    raise ValueError("Duration required but not found in file.")
+
+            try:
+                bpm = int(float(line["BPM"].strip()))
+            except KeyError:
+                if require_bpm:
+                    raise ValueError("BPM required but not found in file.")
+
+            try:
+                year = line["Year"].strip()
+            except KeyError:
+                if require_year:
+                    raise ValueError("Year required but not found in file.")
 
             try:
                 file_path = line["Location"].strip()
             except Exception:
                 if require_fp:
                     raise ValueError("File paths required but not found in file.")
+
+            artist = line["Artist"].strip()
 
             tracks.append(
                 Track(

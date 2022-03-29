@@ -7,8 +7,9 @@ def parser(
     file_path,
     *,
     require_title=True,
-    require_bpm=False,
+    require_duration=False,
     require_year=False,
+    require_bpm=False,
     require_fp=False,
     verbose=False,
 ):
@@ -18,11 +19,14 @@ def parser(
     - artist
     - year
     """
-    if require_bpm:
-        raise NotImplementedError("Serato parser doesn't support require_bpm.")
+    if require_duration:
+        raise NotImplementedError("Serato parser doesn't support require_duration.")
 
     if require_year:
         raise NotImplementedError("Serato parser doesn't support require_year.")
+
+    if require_bpm:
+        raise NotImplementedError("Serato parser doesn't support require_bpm.")
 
     if require_fp:
         raise NotImplementedError("Serato parser doesn't support file paths.")

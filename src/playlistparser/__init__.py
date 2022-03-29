@@ -10,7 +10,7 @@ from .track import Track
 
 
 class PlaylistParser(object):
-    def __init__(self, file_path=None, *, file_obj=None, verbose=False):
+    def __init__(self, file_path=None, *, file_obj=None, require_fp=False, verbose=False):
         self.file_path = file_path
         self.file_obj = file_obj
         self.file_contents = None
@@ -20,6 +20,7 @@ class PlaylistParser(object):
         self.tracks: List[Track] = []
         self._parser: Union[Callable[[str], List], None] = None
         self.is_parsed = False
+        self.require_fp = require_fp
 
         self.playlist_type = self.get_playlist_type()
         if verbose:  # pragma: no cover
@@ -62,7 +63,7 @@ class PlaylistParser(object):
     def parse(self):
         if self.verbose:  # pragma: no cover
             print("Parsing...")
-        self.tracks = self._parser(self.file_path, verbose=self.verbose)  # type: ignore
+        self.tracks = self._parser(self.file_path, require_fp=self.require_fp, verbose=self.verbose)  # type: ignore
         self.is_parsed = True
         if self.verbose:  # pragma: no cover
             print(f"Found {len(self.tracks)} tracks.")

@@ -4,7 +4,7 @@ from ..track import Track
 from ..utils import time_str_to_seconds
 
 
-def parser(file_path, *, verbose=False):
+def parser(file_path, *, require_fp=False, verbose=False):
     """
     VirtualDJ supports:
     - title
@@ -13,6 +13,9 @@ def parser(file_path, *, verbose=False):
     - playtime
     - bpm
     """
+    if require_fp:
+        raise NotImplementedError("VirtualDJ parser doesn't support file paths.")
+
     with open(file_path) as file:
         reader = csv.DictReader(
             file, fieldnames=["Title", "Artist", "Remix", "Length", "Bpm", "Key", "Year"]

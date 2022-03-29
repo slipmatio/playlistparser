@@ -45,7 +45,8 @@ def parser(file_path, *, require_fp=False, verbose=False):
             try:
                 file_path = line["Location"].strip()
             except Exception:
-                pass
+                if require_fp:
+                    raise ValueError("File paths required but not found in file.")
 
             tracks.append(
                 Track(

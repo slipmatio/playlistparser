@@ -3,7 +3,16 @@ import xml.etree.ElementTree as ET
 from ..track import Track
 
 
-def parser(file_path, *, require_fp=False, verbose=False):
+def parser(
+    file_path,
+    *,
+    require_title=True,
+    require_duration=False,
+    require_year=False,
+    require_bpm=False,
+    require_fp=False,
+    verbose=False,
+):
     """
     Traktor supports:
     - title

@@ -13,13 +13,18 @@ SERATO_FILE = join(ROOT_DIR, "data/serato-v25.csv")
 TRAKTOR_FILE = join(ROOT_DIR, "data/traktor-v35.nml")
 VIRTUALDJ_FILE = join(ROOT_DIR, "data/virtualdj-v2021.csv")
 BROKEN_FILE = join(ROOT_DIR, "data/brokentestfile.dat")
+BROKEN_SERATO = join(ROOT_DIR, "data/broken-serato-v25.csv")
 
 verbose = False
 
 
-def test_parser():
+def test_broken_files():
     with pytest.raises(Exception) as exc_info:
         PlaylistParser(BROKEN_FILE, verbose=verbose)
+    assert str(exc_info.value).startswith("Unknown playlist type when opening")
+
+    with pytest.raises(Exception) as exc_info:
+        PlaylistParser(BROKEN_SERATO, verbose=verbose)
     assert str(exc_info.value).startswith("Unknown playlist type when opening")
 
 
@@ -30,6 +35,7 @@ def test_engine():
     assert len(tracks) == 4
     assert len(track.as_dict().keys()) == 7
     assert "year" in track.as_dict().keys()
+    assert tracks[2].artist == "Unknown Artist"
 
 
 def test_rekordbox():
@@ -39,6 +45,7 @@ def test_rekordbox():
     assert len(tracks) == 4
     assert len(track.as_dict().keys()) == 7
     assert "year" in track.as_dict().keys()
+    assert tracks[2].artist == "Unknown Artist"
 
 
 def test_serato():
@@ -48,6 +55,7 @@ def test_serato():
     assert len(tracks) == 4
     assert len(track.as_dict().keys()) == 3
     assert "year" in track.as_dict().keys()
+    assert tracks[2].artist == "Unknown Artist"
 
 
 def test_traktor():
@@ -57,6 +65,7 @@ def test_traktor():
     assert len(tracks) == 4
     assert len(track.as_dict().keys()) == 6
     assert "year" in track.as_dict().keys()
+    assert tracks[2].artist == "Unknown Artist"
 
 
 def test_virtualdj():
@@ -66,6 +75,7 @@ def test_virtualdj():
     assert len(tracks) == 4
     assert len(track.as_dict().keys()) == 6
     assert "year" in track.as_dict().keys()
+    assert tracks[2].artist == "Unknown Artist"
 
 
 def test_all():

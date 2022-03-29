@@ -11,6 +11,7 @@ def parser(
     require_year=False,
     require_bpm=False,
     require_fp=False,
+    default_artist="",
     verbose=False,
 ):
     """
@@ -32,6 +33,8 @@ def parser(
             try:
                 title = line["Title"].strip()
                 artist = line["Artist"].strip()
+                if not artist:
+                    artist = default_artist
                 year = line["Year"].strip()
                 bpm = int(line["BPM"].strip())
                 playtime = int(line["Length"].strip())

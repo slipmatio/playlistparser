@@ -11,6 +11,7 @@ def parser(
     require_year=False,
     require_bpm=False,
     require_fp=False,
+    default_artist="",
     verbose=False,
 ):
     """
@@ -41,6 +42,8 @@ def parser(
                 try:
                     title = line["name"].strip()
                     artist = line["artist"].strip()
+                    if not artist:
+                        artist = default_artist
                     year = line["year"].strip()
                     tracks.append(Track(title=title, artist=artist, year=year))
                 except Exception as e:  # pragma: no cover

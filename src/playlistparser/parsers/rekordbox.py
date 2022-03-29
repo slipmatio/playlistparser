@@ -14,6 +14,7 @@ def parser(
     require_year=False,
     require_bpm=False,
     require_fp=False,
+    default_artist="",
     verbose=False,
 ):
     """
@@ -73,6 +74,8 @@ def parser(
                     raise ValueError("File paths required but not found in file.")
 
             artist = line["Artist"].strip()
+            if not artist:
+                artist = default_artist
 
             tracks.append(
                 Track(

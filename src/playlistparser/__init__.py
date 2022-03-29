@@ -19,6 +19,7 @@ class PlaylistParser(object):
         require_year=False,
         require_bpm=False,
         require_fp=False,
+        default_artist="Unknown Artist",
         verbose=False,
     ):
         self.file_path = file_path
@@ -34,6 +35,7 @@ class PlaylistParser(object):
         self.require_bpm = require_bpm
         self.require_year = require_year
         self.require_fp = require_fp
+        self.default_artist = default_artist
 
         self.playlist_type = self.get_playlist_type()
         if verbose:  # pragma: no cover
@@ -83,6 +85,7 @@ class PlaylistParser(object):
             require_bpm=self.require_bpm,  # type: ignore
             require_year=self.require_year,  # type: ignore
             require_fp=self.require_fp,  # type: ignore
+            default_artist=self.default_artist,  # type: ignore
             verbose=self.verbose,  # type: ignore
         )  # type: ignore
         self.is_parsed = True

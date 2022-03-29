@@ -11,6 +11,7 @@ def parser(
     require_year=False,
     require_bpm=False,
     require_fp=False,
+    default_artist="",
     verbose=False,
 ):
     """
@@ -41,6 +42,8 @@ def parser(
         try:
             track_title = track.get("TITLE", "").strip()
             track_artist = track.get("ARTIST", "").strip()
+            if not track_artist:
+                track_artist = default_artist
 
             meta = track.find("INFO")
             if meta is not None:

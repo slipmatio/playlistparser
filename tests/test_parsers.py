@@ -13,13 +13,18 @@ SERATO_FILE = join(ROOT_DIR, "data/serato-v25.csv")
 TRAKTOR_FILE = join(ROOT_DIR, "data/traktor-v35.nml")
 VIRTUALDJ_FILE = join(ROOT_DIR, "data/virtualdj-v2021.csv")
 BROKEN_FILE = join(ROOT_DIR, "data/brokentestfile.dat")
+BROKEN_SERATO = join(ROOT_DIR, "data/broken-serato-v25.csv")
 
 verbose = False
 
 
-def test_parser():
+def test_broken_files():
     with pytest.raises(Exception) as exc_info:
         PlaylistParser(BROKEN_FILE, verbose=verbose)
+    assert str(exc_info.value).startswith("Unknown playlist type when opening")
+
+    with pytest.raises(Exception) as exc_info:
+        PlaylistParser(BROKEN_SERATO, verbose=verbose)
     assert str(exc_info.value).startswith("Unknown playlist type when opening")
 
 

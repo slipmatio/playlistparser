@@ -4,7 +4,15 @@ from ..track import Track
 from ..utils import time_str_to_seconds
 
 
-def parser(file_path, *, require_fp=False, verbose=False):
+def parser(
+    file_path,
+    *,
+    require_title=True,
+    require_bpm=False,
+    require_year=False,
+    require_fp=False,
+    verbose=False,
+):
     """
     VirtualDJ supports:
     - title
@@ -13,6 +21,12 @@ def parser(file_path, *, require_fp=False, verbose=False):
     - playtime
     - bpm
     """
+    if require_bpm:
+        raise NotImplementedError("VirtualDJ parser doesn't support require_bpm.")
+
+    if require_year:
+        raise NotImplementedError("VirtualDJ parser doesn't support require_year.")
+
     if require_fp:
         raise NotImplementedError("VirtualDJ parser doesn't support file paths.")
 

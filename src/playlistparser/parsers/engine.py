@@ -3,7 +3,15 @@ import csv
 from ..track import Track
 
 
-def parser(file_path, *, require_fp=False, verbose=False):
+def parser(
+    file_path,
+    *,
+    require_title=True,
+    require_bpm=False,
+    require_year=False,
+    require_fp=False,
+    verbose=False,
+):
     """
     Engine supports:
     - title
@@ -14,12 +22,6 @@ def parser(file_path, *, require_fp=False, verbose=False):
     - bpm
     - file_path
     """
-    # Engine v1.6 always includes file paths
-    if require_fp:  # pragma: no cover
-        pass
-    else:  # pragma: no cover
-        pass
-
     with open(file_path) as file:
         reader = csv.DictReader(file)
         tracks = []

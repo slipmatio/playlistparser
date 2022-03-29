@@ -3,13 +3,27 @@ from csv import DictReader
 from ..track import Track
 
 
-def parser(file_path, *, require_fp=False, verbose=False):
+def parser(
+    file_path,
+    *,
+    require_title=True,
+    require_bpm=False,
+    require_year=False,
+    require_fp=False,
+    verbose=False,
+):
     """
     Serato supports:
     - title
     - artist
     - year
     """
+    if require_bpm:
+        raise NotImplementedError("Serato parser doesn't support require_bpm.")
+
+    if require_year:
+        raise NotImplementedError("Serato parser doesn't support require_year.")
+
     if require_fp:
         raise NotImplementedError("Serato parser doesn't support file paths.")
 

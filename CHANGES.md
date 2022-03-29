@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.0-beta.7 (unreleased)
+
+- Feat: added ability to require file_path (In #6)
+
 ## 3.0.0-beta.6 (2022-03-25)
 
 - Feat: added ability to parse file paths from Rekordbox and Engine playlists. (In #5)

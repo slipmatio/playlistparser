@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.0-beta.8 (unreleased)
+
+- Fix: added typings to PlaylistParser arguments.
+
 ## 3.0.0-beta.7 (2022-03-29)
 
 - Feat: added default artist name. (Fixes #8, in #9)

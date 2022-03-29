@@ -12,15 +12,15 @@ from .track import Track
 class PlaylistParser(object):
     def __init__(
         self,
-        file_path=None,
+        file_path: str,
         *,
-        require_title=True,
-        require_duration=False,
-        require_year=False,
-        require_bpm=False,
-        require_fp=False,
-        default_artist="Unknown Artist",
-        verbose=False,
+        require_title: bool = True,
+        require_duration: bool = False,
+        require_year: bool = False,
+        require_bpm: bool = False,
+        require_fp: bool = False,
+        default_artist: str = "Unknown Artist",
+        verbose: bool = False,
     ):
         self.file_path = file_path
         self.file_contents = None

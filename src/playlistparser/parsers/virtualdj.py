@@ -4,7 +4,7 @@ from ..track import Track
 from ..utils import time_str_to_seconds
 
 
-def parser(file_path, *, verbose=False):
+def parser(file_path, *, require_fp=False, verbose=False):
     """
     VirtualDJ supports:
     - title

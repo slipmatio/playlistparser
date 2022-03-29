@@ -1,7 +1,8 @@
 # Changelog
 
-## 3.0.0-beta.7 (unreleased)
+## 3.0.0-beta.7 (2022-03-29)
 
+- Feat: added default artist name. (Fixes #8, in #9)
 - Feat: added ability to require title, duration, year, bpm, and file_path (In #6 and #7)
 
 ## 3.0.0-beta.6 (2022-03-25)

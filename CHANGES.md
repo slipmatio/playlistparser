@@ -1,7 +1,8 @@
 # Changelog
 
-## 3.0.0-beta.8 (unreleased)
+## 3.0.0-beta.8 (2022-04-04)
 
+- Feat: implemented playlist_type as importable Enum class. (In #10)
 - Fix: added typings to PlaylistParser arguments.
 
 ## 3.0.0-beta.7 (2022-03-29)

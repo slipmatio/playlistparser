@@ -23,7 +23,7 @@ verbose = False
 def test_broken_file():
     with pytest.raises(Exception) as exc_info:
         PlaylistParser(BROKEN_FILE, verbose=verbose)
-    assert str(exc_info.value).startswith("Unknown playlist type when opening")
+    assert str(exc_info.value).startswith("Couldn't determine playlist type")
 
 
 def test_utils():

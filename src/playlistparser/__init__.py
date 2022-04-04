@@ -1,4 +1,5 @@
 from csv import DictReader
+from enum import Enum
 from typing import Callable, List, Union
 
 from .parsers.engine import parser as engine_parser
@@ -7,6 +8,15 @@ from .parsers.serato import parser as serato_parser
 from .parsers.traktor import parser as traktor_parser
 from .parsers.virtualdj import parser as virtualdj_parser
 from .track import Track
+
+
+class PlaylistType(Enum):
+    UNKNOWN = 0
+    ENGINE = 1
+    REKORDBOX = 2
+    SERATO = 3
+    TRAKTOR = 4
+    VIRTUALDJ = 5
 
 
 class PlaylistParser(object):
@@ -23,10 +33,8 @@ class PlaylistParser(object):
         verbose: bool = False,
     ):
         self.file_path = file_path
-        self.file_contents = None
         self.verbose = verbose
-        self.playlist_type = "none"
-        self.playlist_name = ""
+        self.playlist_type: PlaylistType = PlaylistType.UNKNOWN
         self.tracks: List[Track] = []
         self._parser: Union[Callable[[str], List], None] = None
         self.is_parsed = False
@@ -37,21 +45,19 @@ class PlaylistParser(object):
         self.require_fp = require_fp
         self.default_artist = default_artist
 
-        self.playlist_type = self.get_playlist_type()
-        if verbose:  # pragma: no cover
-            print(f"Initialized {self.playlist_type} playlist.")
+        self._determine_type()
 
-    def get_playlist_type(self):
+    def _determine_type(self):
         if self.file_path.endswith(".nml"):
             if self.verbose:  # pragma: no cover
                 print("Looking for nml")
             self._parser = traktor_parser
-            return "traktor"
+            self.playlist_type = PlaylistType.TRAKTOR
         elif self.file_path.endswith(".txt"):
             if self.verbose:  # pragma: no cover
                 print("Looking for txt")
             self._parser = rekordbox_parser
-            return "rekordbox"
+            self.playlist_type = PlaylistType.REKORDBOX
         elif self.file_path.endswith(".csv"):
             if self.verbose:  # pragma: no cover
                 print("Looking for csv. filepath: ", self.file_path)
@@ -64,16 +70,21 @@ class PlaylistParser(object):
 
                 if "\ufeffsep=" in line.keys():
                     self._parser = virtualdj_parser
-                    return "virtualdj"
+                    self.playlist_type = PlaylistType.VIRTUALDJ
 
                 if "#" in line.keys():
                     self._parser = engine_parser
-                    return "engine"
+                    self.playlist_type = PlaylistType.ENGINE
 
                 if "name" in line.keys():
                     self._parser = serato_parser
-                    return "serato"
-        raise Exception(f"Unknown playlist type when opening {self.file_path} ")
+                    self.playlist_type = PlaylistType.SERATO
+
+        if self.verbose:  # pragma: no cover
+            print(f"Initialized {self.playlist_type} playlist.")
+
+        if self.playlist_type == PlaylistType.UNKNOWN:
+            raise Exception(f"Couldn't determine playlist type from '{self.file_path}'")
 
     def parse(self):
         if self.verbose:  # pragma: no cover

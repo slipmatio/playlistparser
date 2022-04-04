@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.0-beta.9 (2022-04-04)
+
+- Refactor: use IntEnum instead of Enum for playlist_type.
+
 ## 3.0.0-beta.8 (2022-04-04)
 
 - Feat: implemented playlist_type as importable Enum class. (In #10)

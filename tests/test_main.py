@@ -2,7 +2,7 @@ from os.path import join
 from pathlib import Path
 
 import pytest
-from playlistparser import PlaylistParser
+from playlistparser import PlaylistParser, PlaylistType
 from playlistparser.utils import time_str_to_seconds
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -54,6 +54,12 @@ def test_num_tracks():
     for track in tracks:
         artists.add(track.artist)
     assert len(artists) == 81
+
+
+def test_playlist_type():
+    parser = PlaylistParser(HUNDRED_TRACKS, verbose=verbose)
+    assert parser.playlist_type == PlaylistType.REKORDBOX
+    assert int(parser.playlist_type) == 2
 
 
 @pytest.mark.parametrize(

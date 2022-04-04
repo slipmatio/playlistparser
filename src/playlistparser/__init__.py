@@ -1,5 +1,5 @@
 from csv import DictReader
-from enum import Enum
+from enum import IntEnum
 from typing import Callable, List, Union
 
 from .parsers.engine import parser as engine_parser
@@ -10,7 +10,7 @@ from .parsers.virtualdj import parser as virtualdj_parser
 from .track import Track
 
 
-class PlaylistType(Enum):
+class PlaylistType(IntEnum):
     UNKNOWN = 0
     ENGINE = 1
     REKORDBOX = 2
@@ -109,4 +109,4 @@ class PlaylistParser(object):
         return self.tracks
 
 
-__version__ = "3.0.0-beta.8"
+__version__ = "3.0.0-beta.9"

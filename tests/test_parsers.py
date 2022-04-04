@@ -2,7 +2,7 @@ from os.path import join
 from pathlib import Path
 
 import pytest
-from playlistparser import PlaylistParser
+from playlistparser import PlaylistParser, PlaylistType
 from pytest import approx
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -21,11 +21,11 @@ verbose = False
 def test_broken_files():
     with pytest.raises(Exception) as exc_info:
         PlaylistParser(BROKEN_FILE, verbose=verbose)
-    assert str(exc_info.value).startswith("Unknown playlist type when opening")
+    assert str(exc_info.value).startswith("Couldn't determine playlist type")
 
     with pytest.raises(Exception) as exc_info:
         PlaylistParser(BROKEN_SERATO, verbose=verbose)
-    assert str(exc_info.value).startswith("Unknown playlist type when opening")
+    assert str(exc_info.value).startswith("Couldn't determine playlist type")
 
 
 def test_engine():
@@ -36,6 +36,7 @@ def test_engine():
     assert len(track.as_dict().keys()) == 7
     assert "year" in track.as_dict().keys()
     assert tracks[2].artist == "Unknown Artist"
+    assert parser.playlist_type == PlaylistType.ENGINE
 
 
 def test_rekordbox():
@@ -46,6 +47,7 @@ def test_rekordbox():
     assert len(track.as_dict().keys()) == 7
     assert "year" in track.as_dict().keys()
     assert tracks[2].artist == "Unknown Artist"
+    assert parser.playlist_type == PlaylistType.REKORDBOX
 
 
 def test_serato():
@@ -66,6 +68,7 @@ def test_traktor():
     assert len(track.as_dict().keys()) == 6
     assert "year" in track.as_dict().keys()
     assert tracks[2].artist == "Unknown Artist"
+    assert parser.playlist_type == PlaylistType.TRAKTOR
 
 
 def test_virtualdj():
@@ -76,6 +79,7 @@ def test_virtualdj():
     assert len(track.as_dict().keys()) == 6
     assert "year" in track.as_dict().keys()
     assert tracks[2].artist == "Unknown Artist"
+    assert parser.playlist_type == PlaylistType.VIRTUALDJ
 
 
 def test_all():

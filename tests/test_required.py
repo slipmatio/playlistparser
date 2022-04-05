@@ -13,6 +13,8 @@ REKORDBOX_NOPATHS_FILE = join(ROOT_DIR, "data/rekordbox_1.txt")
 SERATO_FILE = join(ROOT_DIR, "data/serato-v25.csv")
 TRAKTOR_FILE = join(ROOT_DIR, "data/traktor-v35.nml")
 VIRTUALDJ_FILE = join(ROOT_DIR, "data/virtualdj-v2021.csv")
+REKORDBOX_TEST_WO_YEAR = join(ROOT_DIR, "data/PlaylistConverterTest-wo-year.txt")
+REKORDBOX_TEST_W_YEAR = join(ROOT_DIR, "data/PlaylistConverterTest.txt")
 
 verbose = False
 
@@ -103,6 +105,14 @@ def test_rekordbox_year():
             RB_MISSING_META_FILE, require_title=False, require_year=True, verbose=verbose
         )
         parser.parse()
+
+    with pytest.raises(ValueError):
+        parser = PlaylistParser(REKORDBOX_TEST_WO_YEAR, require_year=True, verbose=verbose)
+        parser.parse()
+
+    parser2 = PlaylistParser(REKORDBOX_TEST_W_YEAR, require_year=True, verbose=verbose)
+    parser2.parse()
+    assert len(parser2.tracks) == 4
 
 
 def test_rekordbox_fp():

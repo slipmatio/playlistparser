@@ -47,6 +47,7 @@ def parser(
                     year = line["year"].strip()
                     tracks.append(Track(title=title, artist=artist, year=year))
                 except Exception as e:  # pragma: no cover
-                    print(f"Skipping line {counter}", e)
+                    if verbose:
+                        print(f"Skipping line {counter}", e)
             counter += 1
         return tracks

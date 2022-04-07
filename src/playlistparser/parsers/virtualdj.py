@@ -61,8 +61,7 @@ def parser(
                     )
                 except Exception as e:  # pragma: no cover
                     if verbose:
-                        print(f"Line {counter}: ", line)
-                    print(f"Skipping line {counter}", e)
+                        print(f"Skipping line {counter}", e)
 
             counter += 1
         return tracks

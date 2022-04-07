@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.0-beta.10 (TBD)
+
+- Fix: keep quiet when `verbose=False`.
+
 ## 3.0.0-beta.9 (2022-04-04)
 
 - Refactor: use IntEnum instead of Enum for playlist_type.

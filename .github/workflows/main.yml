@@ -52,6 +52,11 @@ jobs:
         with:
           python-version: '3.13'
 
+      - name: 'Install uv'
+        uses: hynek/setup-cached-uv@v2.3.0
+        with:
+          cache-dependency-path: '**/uv.lock'
+
       - name: Install dependencies
         run: uv sync --dev
 

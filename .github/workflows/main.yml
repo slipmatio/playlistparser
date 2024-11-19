@@ -61,7 +61,7 @@ jobs:
         run: uv sync --dev
 
       - name: Coverage
-        run: uv run pytest --cov=src/playlistparser --cov-report xml
+        run: uv run pytest --cov=playlistparser --cov-report xml
 
       - name: Coverage Summary Report
         uses: irongut/CodeCoverageSummary@v1.3.0

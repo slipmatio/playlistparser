@@ -15,7 +15,7 @@
 *.sw?
 
 # Python stuff
-venv39
+.venv
 **/__pycache__
 data/coverage_report
 .coverage

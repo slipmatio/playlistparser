@@ -1,0 +1,31 @@
+[project]
+name = "playlistparser"
+description = "Tool for parsing DJ software playlists"
+dynamic = ["version"]
+readme = "README.md"
+license = "AGPL-3.0-or-later"
+authors = [{ name = "Ville Säävuori", email = "ville@unessa.net" }]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+
+[project.urls]
+Changelog = "https://github.com/slipmatio/playlistparser/blob/main/CHANGES.md"
+Bluesky = "https://bsky.app/profile/uninen.net"
+Source = "https://github.com/slipmatio/playlistparser"
+Twitter = "https://twitter.com/uninen"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "playlistparser/__init__.py"
+
+[dependency-groups]
+dev = ["pytest>=8.3.3", "pytest-cov>=6.0.0", "ruff>=0.7.4"]

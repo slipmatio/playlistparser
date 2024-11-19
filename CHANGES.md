@@ -1,8 +1,9 @@
 # Changelog
 
-## 3.0.0-beta.10 (TBD)
+## 3.0.0-beta.10 (2024-11-19)
 
 - Fix: keep quiet when `verbose=False`.
+- Refactor: use `uv` for packaging.
 
 ## 3.0.0-beta.9 (2022-04-04)
 

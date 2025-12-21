@@ -4,6 +4,10 @@ Tool for parsing DJ software playlists. Currently supports Engine DJ, Rekordbox,
 
 Live demo of this parser in action: [https://playlists.slipmat.io](https://playlists.slipmat.io)
 
+## Installing
+
+`uv add playlistparser`
+
 ## Contributing
 
 Contributions are welcome! Please follow the [code of conduct](./CODE_OF_CONDUCT.md) when interacting with others.

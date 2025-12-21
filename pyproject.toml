@@ -1,7 +1,7 @@
 [project]
 name = "playlistparser"
 description = "Tool for parsing DJ software playlists"
-dynamic = ["version"]
+version = "3.0.0-beta.10"
 readme = "README.md"
 license = "AGPL-3.0-or-later"
 authors = [{ name = "Ville Säävuori", email = "ville@unessa.net" }]
@@ -21,11 +21,11 @@ Source = "https://github.com/slipmatio/playlistparser"
 Twitter = "https://twitter.com/uninen"
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["uv_build>=0.9.18,<0.10.0"]
+build-backend = "uv_build"
 
-[tool.hatch.version]
-path = "playlistparser/__init__.py"
+[tool.uv.build-backend]
+module-root = ""
 
 [dependency-groups]
-dev = ["pytest>=8.3.3", "pytest-cov>=6.0.0", "ruff>=0.7.4"]
+dev = ["pytest>=9.0.2", "pytest-cov>=7.0.0", "ruff>=0.14.10"]

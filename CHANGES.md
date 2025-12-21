@@ -1,5 +1,11 @@
 # Changelog
 
+## Next (TBA)
+
+- Docs: document installing.
+- Refactor: use uv build backend.
+- Chore: bump dev deps.
+
 ## 3.0.0-beta.10 (2024-11-19)
 
 - Fix: keep quiet when `verbose=False`.

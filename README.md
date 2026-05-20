@@ -1,21 +1,30 @@
 # Playlistparser
 
-Tool for parsing DJ software playlists. Currently supports Engine DJ, Rekordbox, Serato, Traktor, and VirtualDJ. Part of [Slipmat.io](https://slipmat.io) tools.
+Tool for parsing DJ software playlists. Currently supports Engine DJ, Rekordbox, Serato, Traktor,
+and VirtualDJ. Part of [Slipmat.io](https://slipmat.io) tools.
 
-Live demo of this parser in action: [https://playlists.slipmat.io](https://playlists.slipmat.io)
+Free hosted version of this tool:
+[https://slipmat.io/tools/playlist-converter/](https://slipmat.io/tools/playlist-converter/)
 
 ## Installing
 
 `uv add playlistparser`
 
+## Developing
+
+- `uv run pytest` - run test suite
+- `uv run ty check` - typecheck
+
 ## Contributing
 
-Contributions are welcome! Please follow the [code of conduct](./CODE_OF_CONDUCT.md) when interacting with others.
+Contributions are welcome! Please follow the [code of conduct](./CODE_OF_CONDUCT.md) when
+interacting with others.
 
 ## Elsewhere
 
 - [Follow @uninen.net](https://bsky.app/profile/uninen.net) on Bluesky
-- Read my continuously updating learnings from Python / TypeScript and other Web development topics from my [Today I Learned site](https://til.unessa.net/)
+- Read my continuously updating learnings from Python / TypeScript and other Web development topics
+  from my [Today I Learned site](https://til.unessa.net/)
 
 ## Licence
 

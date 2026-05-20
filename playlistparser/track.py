@@ -1,9 +1,8 @@
 from datetime import timedelta
-from typing import Dict, Union
 from unicodedata import normalize
 
 
-class Track(object):
+class Track:
     def __init__(
         self,
         *,
@@ -57,7 +56,7 @@ class Track(object):
             return "0:00"
 
     def as_dict(self, no_meta=False):
-        song: Dict[str, Union[str, int]] = {
+        song: dict[str, str | int] = {
             "title": self.title,
             "artist": self.artist,
         }

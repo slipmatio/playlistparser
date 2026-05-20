@@ -2,6 +2,7 @@ from os.path import join
 from pathlib import Path
 
 import pytest
+
 from playlistparser import PlaylistParser
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -67,43 +68,31 @@ def test_rekordbox_title():
 
 def test_rekordbox_duration():
     with pytest.raises(ValueError):
-        parser = PlaylistParser(
-            RB_MISSING_META_FILE, require_title=False, require_duration=True, verbose=verbose
-        )
+        parser = PlaylistParser(RB_MISSING_META_FILE, require_title=False, require_duration=True, verbose=verbose)
         parser.parse()
 
-    parser = PlaylistParser(
-        REKORDBOX_NOPATHS_FILE, require_title=False, require_duration=True, verbose=verbose
-    )
+    parser = PlaylistParser(REKORDBOX_NOPATHS_FILE, require_title=False, require_duration=True, verbose=verbose)
     parser.parse()
     assert len(parser.tracks) == 16
 
 
 def test_rekordbox_bpm():
     with pytest.raises(ValueError):
-        parser = PlaylistParser(
-            RB_MISSING_META_FILE, require_title=False, require_bpm=True, verbose=verbose
-        )
+        parser = PlaylistParser(RB_MISSING_META_FILE, require_title=False, require_bpm=True, verbose=verbose)
         parser.parse()
 
-    parser = PlaylistParser(
-        REKORDBOX_NOPATHS_FILE, require_title=False, require_bpm=True, verbose=verbose
-    )
+    parser = PlaylistParser(REKORDBOX_NOPATHS_FILE, require_title=False, require_bpm=True, verbose=verbose)
     parser.parse()
     assert len(parser.tracks) == 16
 
 
 def test_rekordbox_year():
-    parser = PlaylistParser(
-        RB_MISSING_META_FILE, require_title=False, require_year=False, verbose=verbose
-    )
+    parser = PlaylistParser(RB_MISSING_META_FILE, require_title=False, require_year=False, verbose=verbose)
     parser.parse()
     assert len(parser.tracks) == 4
 
     with pytest.raises(ValueError):
-        parser = PlaylistParser(
-            RB_MISSING_META_FILE, require_title=False, require_year=True, verbose=verbose
-        )
+        parser = PlaylistParser(RB_MISSING_META_FILE, require_title=False, require_year=True, verbose=verbose)
         parser.parse()
 
     with pytest.raises(ValueError):

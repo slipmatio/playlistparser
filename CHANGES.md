@@ -1,10 +1,12 @@
 # Changelog
 
-## Next (TBA)
+## 3.0.0-beta.11 (2026-05-21)
 
-- Docs: document installing.
-- Refactor: use uv build backend.
-- Chore: bump dev deps.
+- docs: document installing
+- refactor: use uv build backend
+- ci: added Renovate config
+- tooling: added `ty`
+- chore: bump dev deps
 
 ## 3.0.0-beta.10 (2024-11-19)
 

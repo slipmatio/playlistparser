@@ -5,16 +5,16 @@ on:
     branches:
       - main
     paths:
-      - 'src/**/*.py'
-      - 'tests/**'
-      - '.github/workflows/main.yml'
-      - 'uv.lock'
+      - "src/**/*.py"
+      - "tests/**"
+      - ".github/workflows/main.yml"
+      - "uv.lock"
   pull_request:
     paths:
-      - 'src/**/*.py'
-      - 'tests/**'
-      - '.github/workflows/main.yml'
-      - 'uv.lock'
+      - "src/**/*.py"
+      - "tests/**"
+      - ".github/workflows/main.yml"
+      - "uv.lock"
   workflow_dispatch:
 
 jobs:
@@ -23,19 +23,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.11', '3.12', '3.13']
+        python-version: ["3.13", "3.14"]
 
     steps:
-      - uses: actions/checkout@v4.2.2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Setup Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5.3.0
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: 'Install uv'
-        uses: hynek/setup-cached-uv@v2.3.0
+      - name: "Install uv"
+        uses: hynek/setup-cached-uv@4300ec2180bc77d705e626a34e381b81a4772c51 # v2.5.0
         with:
-          cache-dependency-path: '**/uv.lock'
+          cache-dependency-path: "**/uv.lock"
 
       - name: Install dependencies
         run: uv sync --dev
@@ -46,16 +46,16 @@ jobs:
   coverage:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4.2.2
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Setup Python
-        uses: actions/setup-python@v5.3.0
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
-          python-version: '3.13'
+          python-version: "3.13"
 
-      - name: 'Install uv'
+      - name: "Install uv"
         uses: hynek/setup-cached-uv@v2.3.0
         with:
-          cache-dependency-path: '**/uv.lock'
+          cache-dependency-path: "**/uv.lock"
 
       - name: Install dependencies
         run: uv sync --dev
@@ -68,11 +68,11 @@ jobs:
         with:
           filename: coverage.xml
           badge: true
-          format: 'markdown'
-          output: 'both'
+          format: "markdown"
+          output: "both"
 
       - name: Add Coverage PR Comment
-        uses: marocchino/sticky-pull-request-comment@v2.9.0
+        uses: marocchino/sticky-pull-request-comment@0ea0beb66eb9baf113663a64ec522f60e49231c0 # v3.0.4
         if: github.event_name == 'pull_request'
         with:
           recreate: true

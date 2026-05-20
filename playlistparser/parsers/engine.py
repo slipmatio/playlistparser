@@ -27,9 +27,7 @@ def parser(
     with open(file_path) as file:
         reader = csv.DictReader(file)
         tracks = []
-        counter = 0
-
-        for line in reader:
+        for counter, line in enumerate(reader):
             try:
                 title = line["Title"].strip()
                 artist = line["Artist"].strip()
@@ -53,5 +51,4 @@ def parser(
                 if verbose:
                     print(f"Skipping line {counter}", e)
 
-            counter += 1
         return tracks

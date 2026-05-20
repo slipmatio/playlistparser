@@ -2,8 +2,9 @@ from os.path import join
 from pathlib import Path
 
 import pytest
-from playlistparser import PlaylistParser, PlaylistType
 from pytest import approx
+
+from playlistparser import PlaylistParser, PlaylistType
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 
@@ -34,7 +35,7 @@ def test_engine():
     track = tracks[0]
     assert len(tracks) == 4
     assert len(track.as_dict().keys()) == 7
-    assert "year" in track.as_dict().keys()
+    assert "year" in track.as_dict()
     assert tracks[2].artist == "Unknown Artist"
     assert parser.playlist_type == PlaylistType.ENGINE
 
@@ -45,7 +46,7 @@ def test_rekordbox():
     track = tracks[0]
     assert len(tracks) == 4
     assert len(track.as_dict().keys()) == 7
-    assert "year" in track.as_dict().keys()
+    assert "year" in track.as_dict()
     assert tracks[2].artist == "Unknown Artist"
     assert parser.playlist_type == PlaylistType.REKORDBOX
 
@@ -56,7 +57,7 @@ def test_serato():
     track = tracks[0]
     assert len(tracks) == 4
     assert len(track.as_dict().keys()) == 3
-    assert "year" in track.as_dict().keys()
+    assert "year" in track.as_dict()
     assert tracks[2].artist == "Unknown Artist"
 
 
@@ -66,7 +67,7 @@ def test_traktor():
     track = tracks[0]
     assert len(tracks) == 4
     assert len(track.as_dict().keys()) == 6
-    assert "year" in track.as_dict().keys()
+    assert "year" in track.as_dict()
     assert tracks[2].artist == "Unknown Artist"
     assert parser.playlist_type == PlaylistType.TRAKTOR
 
@@ -77,7 +78,7 @@ def test_virtualdj():
     track = tracks[0]
     assert len(tracks) == 4
     assert len(track.as_dict().keys()) == 6
-    assert "year" in track.as_dict().keys()
+    assert "year" in track.as_dict()
     assert tracks[2].artist == "Unknown Artist"
     assert parser.playlist_type == PlaylistType.VIRTUALDJ
 
@@ -103,9 +104,9 @@ def test_all():
     vr_tracks = vr_parser.get_tracks()
     vr_song_0_dict = vr_tracks[0].as_dict()
 
-    assert (
-        set(rb_song_0_dict.keys()).difference(set(en_song_0_dict.keys())) == set()
-    ), "Rekordbox keys should be identical to Engine keys"
+    assert set(rb_song_0_dict.keys()).difference(set(en_song_0_dict.keys())) == set(), (
+        "Rekordbox keys should be identical to Engine keys"
+    )
     assert set(rb_song_0_dict.keys()).difference(set(tr_song_0_dict.keys())) == set({"file_path"})
     assert set(rb_song_0_dict.keys()).difference(set(vr_song_0_dict.keys())) == set({"file_path"})
     assert set(en_song_0_dict.keys()).difference(set(se_song_0_dict.keys())) == set(
@@ -114,13 +115,9 @@ def test_all():
 
     assert len(rb_tracks) == len(en_tracks), "Rekordbox and Engine have different number of tracks"
     assert len(rb_tracks) == len(se_tracks), "Rekordbox and Serato have different number of tracks"
-    assert len(rb_tracks) == len(
-        vr_tracks
-    ), "Rekordbox and VirtualDJ have different number of tracks"
+    assert len(rb_tracks) == len(vr_tracks), "Rekordbox and VirtualDJ have different number of tracks"
 
-    assert len(en_song_0_dict.keys()) == len(
-        rb_song_0_dict.keys()
-    ), "Engine and Rekordbox have different keys"
+    assert len(en_song_0_dict.keys()) == len(rb_song_0_dict.keys()), "Engine and Rekordbox have different keys"
     # assert len(en_song_0_dict.keys()) == len(
     #     tr_song_0_dict.keys()
     # ), "Engine and Traktor have different keys"
@@ -134,9 +131,7 @@ def test_all():
         tr_song = tr_tracks[index]
         vr_song = vr_tracks[index]
 
-        assert (
-            rb_song.artist == en_song.artist == se_song.artist == tr_song.artist == vr_song.artist
-        )
+        assert rb_song.artist == en_song.artist == se_song.artist == tr_song.artist == vr_song.artist
         assert rb_song.title == en_song.title == se_song.title == tr_song.title == vr_song.title
         assert rb_song.year == en_song.year == se_song.year == tr_song.year == vr_song.year
         assert approx(rb_song.duration, abs=1) == en_song.duration

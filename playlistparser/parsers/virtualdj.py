@@ -36,13 +36,9 @@ def parser(
         raise NotImplementedError("VirtualDJ parser doesn't support file paths.")
 
     with open(file_path) as file:
-        reader = csv.DictReader(
-            file, fieldnames=["Title", "Artist", "Remix", "Length", "Bpm", "Key", "Year"]
-        )
+        reader = csv.DictReader(file, fieldnames=["Title", "Artist", "Remix", "Length", "Bpm", "Key", "Year"])
         tracks = []
-        counter = 0
-
-        for line in reader:
+        for counter, line in enumerate(reader):
             if counter > 1:
                 try:
                     title = line["Title"].strip()
@@ -56,12 +52,9 @@ def parser(
                         year = line["Year"].strip()
                     except KeyError:
                         year = ""
-                    tracks.append(
-                        Track(title=title, artist=artist, year=year, duration=playtime, bpm=bpm)
-                    )
+                    tracks.append(Track(title=title, artist=artist, year=year, duration=playtime, bpm=bpm))
                 except Exception as e:  # pragma: no cover
                     if verbose:
                         print(f"Skipping line {counter}", e)
 
-            counter += 1
         return tracks

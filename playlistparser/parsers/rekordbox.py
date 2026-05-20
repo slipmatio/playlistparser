@@ -26,14 +26,13 @@ def parser(
     - bpm
     - file_path
     """
-    with open(file_path, "rb") as handle, codecs.EncodedFile(
-        handle, data_encoding="utf-8", file_encoding="utf-16", errors="ignore"
-    ) as stream:
-
-        reader = csv.DictReader(StringIO(stream.read().decode("utf-8")), delimiter="\t")  # type: ignore
+    with (
+        open(file_path, "rb") as handle,
+        codecs.EncodedFile(handle, data_encoding="utf-8", file_encoding="utf-16", errors="ignore") as stream,
+    ):
+        reader = csv.DictReader(StringIO(stream.read().decode("utf-8")), delimiter="\t")
 
         tracks = []
-        counter = 0
 
         for line in reader:
             artist = ""
@@ -47,31 +46,31 @@ def parser(
                 title = line["Track Title"].strip()
             except KeyError:
                 if require_title:
-                    raise ValueError("Title required but not found in file.")
+                    raise ValueError("Title required but not found in file.") from None
 
             try:
                 playtime = time_str_to_seconds(line["Time"].strip())
             except KeyError:
                 if require_duration:
-                    raise ValueError("Duration required but not found in file.")
+                    raise ValueError("Duration required but not found in file.") from None
 
             try:
                 bpm = int(float(line["BPM"].strip()))
             except KeyError:
                 if require_bpm:
-                    raise ValueError("BPM required but not found in file.")
+                    raise ValueError("BPM required but not found in file.") from None
 
             try:
                 year = line["Year"].strip()
             except KeyError:
                 if require_year:
-                    raise ValueError("Year required but not found in file.")
+                    raise ValueError("Year required but not found in file.") from None
 
             try:
                 file_path = line["Location"].strip()
-            except Exception:
+            except KeyError:
                 if require_fp:
-                    raise ValueError("File paths required but not found in file.")
+                    raise ValueError("File paths required but not found in file.") from None
 
             artist = line["Artist"].strip()
             if not artist:
@@ -87,5 +86,4 @@ def parser(
                     file_path=file_path,
                 )
             )
-            counter += 1
         return tracks

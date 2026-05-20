@@ -27,14 +27,12 @@ def parser(
 
     tracks = []
     traktor_xml = ""
-    counter = 0
-
     with open(file_path) as file:
         traktor_xml = ET.fromstring(file.read())
 
     entries = traktor_xml.findall("COLLECTION/ENTRY")
 
-    for track in entries:
+    for counter, track in enumerate(entries):
         playtime = 0
         year = ""
         bpm = 0
@@ -69,7 +67,5 @@ def parser(
         except Exception as e:  # pragma: no cover
             if verbose:
                 print(f"Skipping line {counter}", e)
-
-        counter += 1
 
     return tracks

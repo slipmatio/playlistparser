@@ -1,0 +1,35 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", "helpers:pinGitHubActionDigests"],
+  "enabledManagers": ["pep621", "github-actions"],
+  "lockFileMaintenance": {
+    "enabled": false
+  },
+  "packageRules": [
+    {
+      "matchManagers": ["github-actions"],
+      "groupName": "tooling-dependencies",
+      "groupSlug": "tooling",
+      "automerge": true,
+      "minimumReleaseAge": "3 days",
+      "automergeSchedule": ["after 4am and before 8am"]
+    },
+    {
+      "matchManagers": ["pep621"],
+      "groupName": "backend-dependencies",
+      "groupSlug": "backend",
+      "automerge": true,
+      "minimumReleaseAge": "3 days",
+      "rangeStrategy": "bump",
+      "automergeSchedule": ["after 4am and before 8am"]
+    },
+    {
+      "description": "Disable requires-python updates in pyproject.toml",
+      "matchManagers": ["pep621"],
+      "matchDepNames": ["python"],
+      "enabled": false
+    }
+  ],
+  "timezone": "Europe/Helsinki",
+  "dependencyDashboard": true
+}

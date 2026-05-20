@@ -2,6 +2,7 @@ from os.path import join
 from pathlib import Path
 
 import pytest
+
 from playlistparser import PlaylistParser, PlaylistType
 from playlistparser.utils import time_str_to_seconds
 

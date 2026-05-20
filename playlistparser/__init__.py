@@ -1,6 +1,6 @@
+from collections.abc import Callable
 from csv import DictReader
 from enum import IntEnum
-from typing import Callable, List, Union
 
 from .parsers.engine import parser as engine_parser
 from .parsers.rekordbox import parser as rekordbox_parser
@@ -19,7 +19,7 @@ class PlaylistType(IntEnum):
     VIRTUALDJ = 5
 
 
-class PlaylistParser(object):
+class PlaylistParser:
     def __init__(
         self,
         file_path: str,
@@ -35,8 +35,8 @@ class PlaylistParser(object):
         self.file_path = file_path
         self.verbose = verbose
         self.playlist_type: PlaylistType = PlaylistType.UNKNOWN
-        self.tracks: List[Track] = []
-        self._parser: Union[Callable[[str], List], None] = None
+        self.tracks: list[Track] = []
+        self._parser: Callable[[str], list] | None = None
         self.is_parsed = False
         self.require_title = require_title
         self.require_duration = require_duration
@@ -68,15 +68,15 @@ class PlaylistParser(object):
                 if self.verbose:  # pragma: no cover
                     print("First line: ", line)
 
-                if "\ufeffsep=" in line.keys():
+                if "\ufeffsep=" in line:
                     self._parser = virtualdj_parser
                     self.playlist_type = PlaylistType.VIRTUALDJ
 
-                if "#" in line.keys():
+                if "#" in line:
                     self._parser = engine_parser
                     self.playlist_type = PlaylistType.ENGINE
 
-                if "name" in line.keys():
+                if "name" in line:
                     self._parser = serato_parser
                     self.playlist_type = PlaylistType.SERATO
 

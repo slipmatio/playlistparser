@@ -29,3 +29,8 @@ dist
 *.local
 LOCAL_NOTES.md
 parse.py
+
+.agents
+.claude
+AGENTS.md
+CLAUDE.md

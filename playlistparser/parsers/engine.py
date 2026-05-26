@@ -72,8 +72,8 @@ def iter_tracks(
                 except ValueError:
                     playtime = 0
 
-                fp = csv_field(row, columns, FILE_COL)
-                if not fp and "file_path" in require:
+                track_path = csv_field(row, columns, FILE_COL)
+                if not track_path and "file_path" in require:
                     raise MissingFieldError("file_path", line=lineno, track_title=title)
 
                 yield Track(
@@ -82,7 +82,7 @@ def iter_tracks(
                     year=year,
                     duration=playtime,
                     bpm=bpm,
-                    file_path=fp,
+                    file_path=track_path,
                 )
             except MissingFieldError:
                 raise

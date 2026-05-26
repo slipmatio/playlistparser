@@ -87,7 +87,7 @@ class PlaylistParser:
         tracks = PlaylistParser("set.nml").to_list()  # explicit materialisation
 
         pl = PlaylistParser("history.csv")
-        print(pl.format)  # PlaylistType.SERATO / ENGINE / VIRTUALDJ
+        print(pl.playlist_type)  # PlaylistType.SERATO / ENGINE / VIRTUALDJ
         print(pl.track_count)  # materialises once, cached thereafter
         print(pl.total_duration)  # seconds
     """
@@ -118,7 +118,7 @@ class PlaylistParser:
             # .csv → resolved_type stays None until first access
 
     @property
-    def format(self) -> PlaylistType:
+    def playlist_type(self) -> PlaylistType:
         """Format of the playlist, detected lazily for CSV files."""
         if self.resolved_type is None:
             self.resolved_type = sniff_csv(self.path)
@@ -158,20 +158,20 @@ class PlaylistParser:
             "require": self.require,
             "default_artist": self.default_artist,
         }
-        pt = self.format
-        unsupported = self.require - SUPPORTED_FIELDS_BY_TYPE.get(pt, frozenset())
+        detected_type = self.playlist_type
+        unsupported = self.require - SUPPORTED_FIELDS_BY_TYPE.get(detected_type, frozenset())
         if unsupported:
             raise MissingFieldError(sorted(unsupported)[0])
         path_str = str(self.path)
-        if pt == PlaylistType.ENGINE:
+        if detected_type == PlaylistType.ENGINE:
             yield from engine_iter(path_str, **kw)  # type: ignore[arg-type]
-        elif pt == PlaylistType.REKORDBOX:
+        elif detected_type == PlaylistType.REKORDBOX:
             yield from rekordbox_iter(path_str, **kw)  # type: ignore[arg-type]
-        elif pt == PlaylistType.SERATO:
+        elif detected_type == PlaylistType.SERATO:
             yield from serato_iter(path_str, **kw)  # type: ignore[arg-type]
-        elif pt == PlaylistType.TRAKTOR:
+        elif detected_type == PlaylistType.TRAKTOR:
             yield from traktor_iter(path_str, **kw)  # type: ignore[arg-type]
-        elif pt == PlaylistType.VIRTUALDJ:
+        elif detected_type == PlaylistType.VIRTUALDJ:
             yield from virtualdj_iter(path_str, **kw)  # type: ignore[arg-type]
         else:
             raise UnknownFormatError(self.path)

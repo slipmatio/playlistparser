@@ -7,7 +7,7 @@
 - Breaking: all parsers are now streaming generators; the v3 `parser()` wrappers are removed.
 - Feat: single `PlaylistParser` class as the only public entry point. Streaming via `for track in
   PlaylistParser(path)` is the default; `.to_list()` is the explicit eager escape hatch.
-- Feat: `PlaylistParser.format` property — detects format eagerly for `.nml`/`.txt`, lazily (CSV sniff)
+- Feat: `PlaylistParser.playlist_type` property — detects format eagerly for `.nml`/`.txt`, lazily (CSV sniff)
   for `.csv`; bypassed entirely when `as_type=` is supplied.
 - Feat: `PlaylistParser.track_count` and `PlaylistParser.total_duration` aggregate properties; both
   materialise once and reuse a private cache on subsequent reads.

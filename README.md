@@ -53,7 +53,7 @@ try:
 
     # Detected format (PlaylistType enum: ENGINE, REKORDBOX, SERATO,
     # TRAKTOR, VIRTUALDJ). For .csv this triggers a one-time header sniff.
-    print(f"Format: {pl.format.name}")
+    print(f"Format: {pl.playlist_type.name}")
 
     # Stream tracks. Iteration is lazy — each pass re-reads the file unless
     # you materialise with .to_list() (cached for the lifetime of the parser).
@@ -116,8 +116,8 @@ except FileNotFoundError:
 
 - `uv run ruff format` - format
 - `uv run ruff check --fix --extend-fixable F401` - lint
-- `uv run pytest` - run test suite
 - `uv run ty check` - typecheck
+- `uv run pytest` - run test suite
 
 ## Contributing
 

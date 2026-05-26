@@ -18,10 +18,10 @@ def clean_year(raw: str | int) -> int:
     """Extract a four-digit year from *raw*, return 0 on failure."""
     if isinstance(raw, int):
         return raw
-    m = YEAR_RE.search(raw)
-    if m:
+    match = YEAR_RE.search(raw)
+    if match:
         try:
-            return int(m.group())
+            return int(match.group())
         except ValueError:
             return 0
     return 0
@@ -80,10 +80,10 @@ class Track:
         song: dict[str, str | int] = {"title": self.title, "artist": self.artist}
         if no_meta:
             return song
-        d = dataclasses.asdict(self)
+        all_fields = dataclasses.asdict(self)
         for key in ("duration", "year", "bpm", "file_path"):
-            if d[key]:
-                song[key] = d[key]
+            if all_fields[key]:
+                song[key] = all_fields[key]
         if self.duration:
             song["duration_str"] = self.duration_str()
         return song

@@ -64,7 +64,7 @@ def test_time_str_to_seconds(raw, seconds):
 
 @pytest.mark.parametrize(("file_path", "expected_type"), ALL_FORMAT_FILES)
 def test_detect_format(file_path, expected_type):
-    assert PlaylistParser(file_path).format == expected_type
+    assert PlaylistParser(file_path).playlist_type == expected_type
 
 
 def test_detect_format_unknown():
@@ -78,11 +78,11 @@ def test_detect_format_unknown():
 
 
 def test_detect_format_accepts_pathlib():
-    assert PlaylistParser(Path(TRAKTOR_FILE)).format == PlaylistType.TRAKTOR
+    assert PlaylistParser(Path(TRAKTOR_FILE)).playlist_type == PlaylistType.TRAKTOR
 
 
 def test_detect_format_accepts_str():
-    assert PlaylistParser(str(REKORDBOX_FILE)).format == PlaylistType.REKORDBOX
+    assert PlaylistParser(str(REKORDBOX_FILE)).playlist_type == PlaylistType.REKORDBOX
 
 
 def test_parse_pathlib():
@@ -147,7 +147,7 @@ def test_playlist_path_property():
 
 def test_playlist_format_property():
     p = PlaylistParser(TRAKTOR_FILE)
-    assert p.format == PlaylistType.TRAKTOR
+    assert p.playlist_type == PlaylistType.TRAKTOR
 
 
 def test_playlist_iter():
@@ -184,7 +184,7 @@ def test_playlist_format_override_uses_requested_parser_despite_extension(tmp_pa
 @pytest.mark.parametrize(("file_path", "expected_type"), ALL_FORMAT_FILES)
 def test_playlist_detects_format(file_path, expected_type):
     p = PlaylistParser(file_path)
-    assert p.format == expected_type
+    assert p.playlist_type == expected_type
 
 
 def test_playlist_unknown_raises():

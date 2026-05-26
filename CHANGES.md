@@ -6,9 +6,9 @@
   booleans from v3. Use `require=[...]` on `PlaylistParser` instead.
 - Breaking: all parsers are now streaming generators; the v3 `parser()` wrappers are removed.
 - Feat: single `PlaylistParser` class as the only public entry point. Streaming via `for track in
-  PlaylistParser(path)` is the default; `.to_list()` is the explicit eager escape hatch.
-- Feat: `PlaylistParser.playlist_type` property — detects format eagerly for `.nml`/`.txt`, lazily (CSV sniff)
-  for `.csv`; bypassed entirely when `as_type=` is supplied.
+PlaylistParser(path)` is the default; `.to_list()` is the explicit eager escape hatch.
+- Feat: `PlaylistParser.playlist_type` property — detects format eagerly for `.nml`/`.txt`, lazily
+  (CSV sniff) for `.csv`; bypassed entirely when `as_type=` is supplied.
 - Feat: `PlaylistParser.track_count` and `PlaylistParser.total_duration` aggregate properties; both
   materialise once and reuse a private cache on subsequent reads.
 - Feat: `FieldName` type alias and full exception hierarchy (`PlaylistParserError`,
@@ -17,8 +17,48 @@
 - Fix: Traktor yields `duration=0` when `PLAYTIME` is absent instead of crashing.
 - Perf: Rekordbox streams via `io.TextIOWrapper`; Traktor uses `lxml.etree.iterparse`; CSV parsers
   use `csv.reader` with a header-index map.
+- Breaking: requires Python 3.14+.
 - Refactor: `Track` is now a frozen, slotted dataclass with equality, hash, and repr.
 - Refactor: explicit `encoding=` on every `open()` call; `logging` replaces `print()`.
+
+### Migrating from v3 to v4
+
+```python
+# --- v3 ---
+pl = PlaylistParser("set.nml",
+    require_title=True,
+    require_duration=False,
+    verbose=True,
+)
+pl.parse()
+tracks = pl.get_tracks()
+
+# --- v4 ---
+pl = PlaylistParser("set.nml", require=["title"])
+tracks = pl.to_list()             # or just: list(pl)
+for track in pl:                  # streaming, no materialisation
+    print(track)
+```
+
+| v3                                              | v4                                                            |
+| ----------------------------------------------- | ------------------------------------------------------------- |
+| `PlaylistParser(path, require_title=True, ...)` | `PlaylistParser(path, require=["title", ...])`                |
+| `PlaylistParser(path, require_fp=True)`         | `PlaylistParser(path, require=["file_path"])`                 |
+| `pl.parse()` then `pl.get_tracks()`             | `pl.to_list()` or `for track in pl:`                          |
+| `pl.verbose = True`                             | _(removed — library uses `logging` now)_                      |
+| `Track(..., year="2024-01")`                    | `Track(..., year="2024")` — still accepts `str` or `int`      |
+| `track.as_dict(no_meta=True)`                   | `track.as_dict(no_meta=True)` — `no_meta` is now keyword-only |
+| `except Exception` on bad format                | `except UnknownFormatError`                                   |
+| `except Exception` on missing field             | `except MissingFieldError`                                    |
+| _(no base class)_                               | `except PlaylistParserError` catches all library exceptions   |
+| _(no exception)_                                | `MalformedPlaylistError` on corrupt/unreadable playlist files |
+
+**Other changes:**
+
+- `Track` is now frozen (immutable) and hashable.
+- `PlaylistParser.playlist_type`, `.track_count`, `.total_duration` are available as properties.
+- `PlaylistParser(path, as_type=PlaylistType.SERATO)` skips format detection.
+- Requires Python 3.14+.
 
 ## 3.0.0-beta.11 (2026-05-21)
 

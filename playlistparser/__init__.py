@@ -1,5 +1,3 @@
-"""playlistparser — public API."""
-
 import csv
 from enum import IntEnum
 from pathlib import Path

@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 from playlistparser.exceptions import MissingFieldError
 from playlistparser.track import Track
-from playlistparser.utils import time_str_to_seconds
+from playlistparser.utils import csv_field, time_str_to_seconds
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -19,13 +19,6 @@ ARTIST_COL = "Artist"
 LENGTH_COL = "Length"
 BPM_COL = "Bpm"
 YEAR_COL = "Year"
-
-
-def _get_field(row: list[str], idx: dict[str, int], col: str, default: str = "") -> str:
-    i = idx.get(col)
-    if i is None or i >= len(row):
-        return default
-    return row[i].strip()
 
 
 def iter_tracks(
@@ -51,17 +44,17 @@ def iter_tracks(
             return
 
         header = [h.strip() for h in raw_header]
-        idx: dict[str, int] = {col: i for i, col in enumerate(header)}
+        columns: dict[str, int] = {name: position for position, name in enumerate(header)}
 
         for lineno, row in enumerate(reader, start=3):
             try:
-                title = _get_field(row, idx, TITLE_COL)
+                title = csv_field(row, columns, TITLE_COL)
                 if not title and "title" in require:
                     raise MissingFieldError("title", line=lineno)
 
-                artist = _get_field(row, idx, ARTIST_COL) or default_artist
+                artist = csv_field(row, columns, ARTIST_COL) or default_artist
 
-                raw_length = _get_field(row, idx, LENGTH_COL)
+                raw_length = csv_field(row, columns, LENGTH_COL)
                 try:
                     playtime = time_str_to_seconds(raw_length) if raw_length else 0
                 except ValueError, AttributeError:
@@ -69,7 +62,7 @@ def iter_tracks(
                 if playtime == 0 and "duration" in require:
                     raise MissingFieldError("duration", line=lineno, track_title=title or None)
 
-                raw_bpm = _get_field(row, idx, BPM_COL)
+                raw_bpm = csv_field(row, columns, BPM_COL)
                 try:
                     bpm = int(float(raw_bpm)) if raw_bpm else 0
                 except ValueError, AttributeError:
@@ -77,7 +70,7 @@ def iter_tracks(
                 if bpm == 0 and "bpm" in require:
                     raise MissingFieldError("bpm", line=lineno, track_title=title or None)
 
-                year = _get_field(row, idx, YEAR_COL)
+                year = csv_field(row, columns, YEAR_COL)
                 if not year and "year" in require:
                     raise MissingFieldError("year", line=lineno, track_title=title or None)
 

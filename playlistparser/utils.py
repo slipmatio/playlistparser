@@ -8,3 +8,15 @@ def time_str_to_seconds(time: str) -> int:
     except ValueError, TypeError, AttributeError:
         secs = 0
     return secs
+
+
+def csv_field(
+    row: list[str],
+    columns: dict[str, int],
+    name: str,
+    default: str = "",
+) -> str:
+    position = columns.get(name)
+    if position is None or position >= len(row):
+        return default
+    return row[position].strip()

@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 from playlistparser.exceptions import MissingFieldError
 from playlistparser.track import Track
+from playlistparser.utils import csv_field
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -19,13 +20,6 @@ YEAR_COL = "year"
 
 # Serato exports a session-timestamp pseudo-row immediately after the header.
 SESSION_TIMESTAMP_LINENO = 2
-
-
-def _get_field(row: list[str], idx: dict[str, int], col: str, default: str = "") -> str:
-    i = idx.get(col)
-    if i is None or i >= len(row):
-        return default
-    return row[i].strip()
 
 
 def iter_tracks(
@@ -48,7 +42,7 @@ def iter_tracks(
             return
 
         header = [h.strip() for h in raw_header]
-        idx: dict[str, int] = {col: i for i, col in enumerate(header)}
+        columns: dict[str, int] = {name: position for position, name in enumerate(header)}
 
         for lineno, row in enumerate(reader, start=2):
             # First data row is the session timestamp line — skip it.
@@ -56,16 +50,16 @@ def iter_tracks(
                 continue
 
             try:
-                title = _get_field(row, idx, NAME_COL)
+                title = csv_field(row, columns, NAME_COL)
                 if not title and "title" in require:
                     raise MissingFieldError("title", line=lineno)
 
-                artist = _get_field(row, idx, ARTIST_COL)
+                artist = csv_field(row, columns, ARTIST_COL)
                 if not artist and "artist" in require:
                     raise MissingFieldError("artist", line=lineno, track_title=title or None)
                 artist = artist or default_artist
 
-                year = _get_field(row, idx, YEAR_COL)
+                year = csv_field(row, columns, YEAR_COL)
                 if not year and "year" in require:
                     raise MissingFieldError("year", line=lineno, track_title=title or None)
 

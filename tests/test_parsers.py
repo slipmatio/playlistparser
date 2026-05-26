@@ -37,7 +37,7 @@ def test_engine_require_fp():
     # Engine supports file_path — requiring it on a file that has paths works.
     tracks = PlaylistParser(ENGINE_FILE, require=["file_path"]).to_list()
     assert len(tracks) == 4
-    assert all(t.file_path for t in tracks)
+    assert all(track.file_path for track in tracks)
 
 
 # Rekordbox

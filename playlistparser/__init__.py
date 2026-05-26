@@ -132,7 +132,7 @@ class PlaylistParser:
     @property
     def total_duration(self) -> int:
         """Sum of all track durations in seconds (materialises if not yet accessed)."""
-        return sum(t.duration for t in self.materialise())
+        return sum(track.duration for track in self.materialise())
 
     def __iter__(self) -> Iterator[Track]:
         """Yield tracks one by one; always a fresh streaming pass."""

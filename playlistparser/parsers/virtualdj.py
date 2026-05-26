@@ -43,8 +43,8 @@ def iter_tracks(
         except StopIteration:
             return
 
-        header = [h.strip() for h in raw_header]
-        columns: dict[str, int] = {name: position for position, name in enumerate(header)}
+        headers = [header.strip() for header in raw_header]
+        columns: dict[str, int] = {name: position for position, name in enumerate(headers)}
 
         for lineno, row in enumerate(reader, start=3):
             try:

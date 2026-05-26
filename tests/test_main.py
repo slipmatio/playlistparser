@@ -130,45 +130,45 @@ def test_iter_tracks_streams_without_validating_unconsumed_rows(tmp_path):
 
 
 def test_playlist_accepts_str():
-    p = PlaylistParser(str(REKORDBOX_FILE))
-    assert len(p.to_list()) == 4
+    parser = PlaylistParser(str(REKORDBOX_FILE))
+    assert len(parser.to_list()) == 4
 
 
 def test_playlist_accepts_pathlib():
-    p = PlaylistParser(Path(TRAKTOR_FILE))
-    assert len(p.to_list()) == 4
+    parser = PlaylistParser(Path(TRAKTOR_FILE))
+    assert len(parser.to_list()) == 4
 
 
 def test_playlist_path_property():
-    p = PlaylistParser(REKORDBOX_FILE)
-    assert isinstance(p.path, Path)
-    assert p.path == Path(REKORDBOX_FILE)
+    parser = PlaylistParser(REKORDBOX_FILE)
+    assert isinstance(parser.path, Path)
+    assert parser.path == Path(REKORDBOX_FILE)
 
 
 def test_playlist_format_property():
-    p = PlaylistParser(TRAKTOR_FILE)
-    assert p.playlist_type == PlaylistType.TRAKTOR
+    parser = PlaylistParser(TRAKTOR_FILE)
+    assert parser.playlist_type == PlaylistType.TRAKTOR
 
 
 def test_playlist_iter():
-    p = PlaylistParser(ENGINE_FILE)
-    tracks = list(p)
+    parser = PlaylistParser(ENGINE_FILE)
+    tracks = list(parser)
     assert len(tracks) == 4
 
 
 def test_playlist_track_count():
-    p = PlaylistParser(SERATO_FILE)
-    assert p.track_count == 4
+    parser = PlaylistParser(SERATO_FILE)
+    assert parser.track_count == 4
 
 
 def test_playlist_tracks_lazy():
-    p = PlaylistParser(ENGINE_FILE)
+    parser = PlaylistParser(ENGINE_FILE)
     # track_count triggers materialisation; verify it returns a positive int
-    count = p.track_count
+    count = parser.track_count
     assert count > 0
     # second to_list() returns the same cached list
-    first = p.to_list()
-    second = p.to_list()
+    first = parser.to_list()
+    second = parser.to_list()
     assert first is second
 
 
@@ -183,8 +183,8 @@ def test_playlist_format_override_uses_requested_parser_despite_extension(tmp_pa
 
 @pytest.mark.parametrize(("file_path", "expected_type"), ALL_FORMAT_FILES)
 def test_playlist_detects_format(file_path, expected_type):
-    p = PlaylistParser(file_path)
-    assert p.playlist_type == expected_type
+    parser = PlaylistParser(file_path)
+    assert parser.playlist_type == expected_type
 
 
 def test_playlist_unknown_raises():
@@ -193,9 +193,9 @@ def test_playlist_unknown_raises():
 
 
 def test_broken_csv_raises_on_access():
-    p = PlaylistParser(BROKEN_SERATO)
+    parser = PlaylistParser(BROKEN_SERATO)
     with pytest.raises(UnknownFormatError):
-        _ = p.to_list()
+        _ = parser.to_list()
 
 
 def test_unknown_error_message_lists_extensions():
@@ -236,14 +236,28 @@ def test_cross_format_track_data():
 
     assert len(rb_tracks) == len(en_tracks) == len(se_tracks) == len(tr_tracks) == len(vj_tracks)
 
-    for i, rb in enumerate(rb_tracks):
-        en = en_tracks[i]
-        se = se_tracks[i]
-        tr = tr_tracks[i]
-        vj = vj_tracks[i]
-        assert rb.artist == en.artist == se.artist == tr.artist == vj.artist
-        assert rb.title == en.title == se.title == tr.title == vj.title
-        assert rb.year == en.year == se.year == tr.year == vj.year
+    for i, rekordbox_track in enumerate(rb_tracks):
+        engine_track = en_tracks[i]
+        serato_track = se_tracks[i]
+        traktor_track = tr_tracks[i]
+        virtualdj_track = vj_tracks[i]
+        assert (
+            rekordbox_track.artist
+            == engine_track.artist
+            == serato_track.artist
+            == traktor_track.artist
+            == virtualdj_track.artist
+        )
+        assert (
+            rekordbox_track.title
+            == engine_track.title
+            == serato_track.title
+            == traktor_track.title
+            == virtualdj_track.title
+        )
+        assert (
+            rekordbox_track.year == engine_track.year == serato_track.year == traktor_track.year == virtualdj_track.year
+        )
 
 
 def test_num_tracks_large_file():
@@ -253,7 +267,7 @@ def test_num_tracks_large_file():
 
 def test_five_artists():
     tracks = PlaylistParser(DATA / "TestList5Artists.txt").to_list()
-    artists = {t.artist for t in tracks}
+    artists = {track.artist for track in tracks}
     assert len(artists) == 5
 
 
@@ -269,10 +283,10 @@ def test_iter_makes_fresh_streaming_pass(monkeypatch):
         yield from original_traktor_iter(*args, **kwargs)
 
     monkeypatch.setattr(playlistparser_module, "traktor_iter", counting_iter)
-    pl = PlaylistParser(TRAKTOR_FILE)
+    parser = PlaylistParser(TRAKTOR_FILE)
 
-    first = list(pl)
-    second = list(pl)
+    first = list(parser)
+    second = list(parser)
 
     assert first == second
     assert len(calls) == 2  # iter_tracks called twice — fresh pass each time
@@ -287,10 +301,10 @@ def test_to_list_uses_cache_on_second_call(monkeypatch):
         yield from original_traktor_iter(*args, **kwargs)
 
     monkeypatch.setattr(playlistparser_module, "traktor_iter", counting_iter)
-    pl = PlaylistParser(TRAKTOR_FILE)
+    parser = PlaylistParser(TRAKTOR_FILE)
 
-    first = pl.to_list()
-    second = pl.to_list()
+    first = parser.to_list()
+    second = parser.to_list()
 
     assert first is second
     assert len(calls) == 1  # iter_tracks called only once
@@ -305,14 +319,14 @@ def test_track_count_and_total_duration_share_to_list_cache(monkeypatch):
         yield from original_traktor_iter(*args, **kwargs)
 
     monkeypatch.setattr(playlistparser_module, "traktor_iter", counting_iter)
-    pl = PlaylistParser(TRAKTOR_FILE)
+    parser = PlaylistParser(TRAKTOR_FILE)
 
-    tracks = pl.to_list()
-    count = pl.track_count
-    dur = pl.total_duration
+    tracks = parser.to_list()
+    count = parser.track_count
+    dur = parser.total_duration
 
     assert count == len(tracks)
-    assert dur == sum(t.duration for t in tracks)
+    assert dur == sum(track.duration for track in tracks)
     assert len(calls) == 1  # only one file parse
 
 
@@ -321,8 +335,8 @@ def test_format_override_nonstandard_extension(tmp_path):
     dat_file = tmp_path / "export.dat"
     dat_file.write_bytes(ENGINE_FILE.read_bytes())
 
-    pl = PlaylistParser(dat_file, as_type=PlaylistType.ENGINE)
-    tracks = pl.to_list()
+    parser = PlaylistParser(dat_file, as_type=PlaylistType.ENGINE)
+    tracks = parser.to_list()
 
     assert len(tracks) == 4
-    assert [t.title for t in tracks] == EXPECTED_TITLES
+    assert [track.title for track in tracks] == EXPECTED_TITLES

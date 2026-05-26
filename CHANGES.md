@@ -3,13 +3,16 @@
 ## 4.0.0 (2026-05-26)
 
 - Breaking: removed `parse()`, `get_tracks()`, `verbose=`, and the five individual `require_*`
-  booleans from `PlaylistParser`. Use `require=[...]` instead.
-- Breaking: all parsers are now streaming generators; the `parser()` wrappers are removed.
-- Feat: top-level `parse()`, `iter_tracks()`, and `detect_format()` convenience functions.
+  booleans from v3. Use `require=[...]` on `PlaylistParser` instead.
+- Breaking: all parsers are now streaming generators; the v3 `parser()` wrappers are removed.
+- Feat: single `PlaylistParser` class as the only public entry point. Streaming via `for track in
+  PlaylistParser(path)` is the default; `.to_list()` is the explicit eager escape hatch.
+- Feat: `PlaylistParser.format` property — detects format eagerly for `.nml`/`.txt`, lazily (CSV sniff)
+  for `.csv`; bypassed entirely when `as_type=` is supplied.
+- Feat: `PlaylistParser.track_count` and `PlaylistParser.total_duration` aggregate properties; both
+  materialise once and reuse a private cache on subsequent reads.
 - Feat: `FieldName` type alias and full exception hierarchy (`PlaylistParserError`,
   `UnknownFormatError`, `MalformedPlaylistError`, `MissingFieldError`) exported from package root.
-- Feat: `PlaylistParser` accepts `str | os.PathLike`, exposes `path`, `as_type`, `playlist_type`,
-  lazy `tracks` property, and supports `iter()` and `len()`.
 - Fix: all `require=` fields now correctly raise `MissingFieldError` across all parsers.
 - Fix: Traktor yields `duration=0` when `PLAYTIME` is absent instead of crashing.
 - Perf: Rekordbox streams via `io.TextIOWrapper`; Traktor uses `lxml.etree.iterparse`; CSV parsers

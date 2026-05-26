@@ -4,8 +4,7 @@ from pathlib import Path
 
 import pytest
 
-import playlistparser as pp
-from playlistparser import MissingFieldError
+from playlistparser import MissingFieldError, PlaylistParser
 
 DATA = Path(__file__).resolve().parent.parent / "data"
 
@@ -25,7 +24,7 @@ RB_W_YEAR = DATA / "PlaylistConverterTest.txt"
 
 
 def test_engine_basic():
-    tracks = pp.parse(ENGINE_FILE)
+    tracks = PlaylistParser(ENGINE_FILE).to_list()
     assert len(tracks) == 4
     assert tracks[0].year > 0
     assert tracks[0].duration > 0
@@ -36,7 +35,7 @@ def test_engine_basic():
 
 def test_engine_require_fp():
     # Engine supports file_path — requiring it on a file that has paths works.
-    tracks = pp.parse(ENGINE_FILE, require=["file_path"])
+    tracks = PlaylistParser(ENGINE_FILE, require=["file_path"]).to_list()
     assert len(tracks) == 4
     assert all(t.file_path for t in tracks)
 
@@ -45,7 +44,7 @@ def test_engine_require_fp():
 
 
 def test_rekordbox_basic():
-    tracks = pp.parse(REKORDBOX_FILE)
+    tracks = PlaylistParser(REKORDBOX_FILE).to_list()
     assert len(tracks) == 4
     assert tracks[0].year > 0
     assert tracks[0].duration > 0
@@ -54,7 +53,7 @@ def test_rekordbox_basic():
 
 def test_rekordbox_require_title_missing():
     with pytest.raises(MissingFieldError) as exc_info:
-        pp.parse(RB_MISSING_META_FILE, require=["title"])
+        PlaylistParser(RB_MISSING_META_FILE, require=["title"]).to_list()
     err = exc_info.value
     assert err.field == "title"
     assert err.line is not None
@@ -62,42 +61,42 @@ def test_rekordbox_require_title_missing():
 
 def test_rekordbox_require_duration_missing():
     with pytest.raises(MissingFieldError) as exc_info:
-        pp.parse(RB_MISSING_META_FILE, require=["duration"])
+        PlaylistParser(RB_MISSING_META_FILE, require=["duration"]).to_list()
     assert exc_info.value.field == "duration"
 
 
 def test_rekordbox_require_bpm_missing():
     with pytest.raises(MissingFieldError) as exc_info:
-        pp.parse(RB_MISSING_META_FILE, require=["bpm"])
+        PlaylistParser(RB_MISSING_META_FILE, require=["bpm"]).to_list()
     assert exc_info.value.field == "bpm"
 
 
 def test_rekordbox_require_year_missing():
     with pytest.raises(MissingFieldError) as exc_info:
-        pp.parse(RB_MISSING_META_FILE, require=["year"])
+        PlaylistParser(RB_MISSING_META_FILE, require=["year"]).to_list()
     assert exc_info.value.field == "year"
 
     with pytest.raises(MissingFieldError):
-        pp.parse(RB_WO_YEAR, require=["year"])
+        PlaylistParser(RB_WO_YEAR, require=["year"]).to_list()
 
-    tracks = pp.parse(RB_W_YEAR, require=["year"])
+    tracks = PlaylistParser(RB_W_YEAR, require=["year"]).to_list()
     assert len(tracks) == 4
 
 
 def test_rekordbox_require_fp_missing():
     with pytest.raises(MissingFieldError) as exc_info:
-        pp.parse(REKORDBOX_NOPATHS_FILE, require=["file_path"])
+        PlaylistParser(REKORDBOX_NOPATHS_FILE, require=["file_path"]).to_list()
     assert exc_info.value.field == "file_path"
 
 
 def test_rekordbox_no_paths_ok():
-    tracks = pp.parse(REKORDBOX_NOPATHS_FILE)
+    tracks = PlaylistParser(REKORDBOX_NOPATHS_FILE).to_list()
     assert len(tracks) == 16
 
 
 def test_rekordbox_missing_meta_no_require():
     # Without require= the file should parse (yielding 4 tracks with empty fields).
-    tracks = pp.parse(RB_MISSING_META_FILE)
+    tracks = PlaylistParser(RB_MISSING_META_FILE).to_list()
     assert len(tracks) == 4
 
 
@@ -105,14 +104,14 @@ def test_rekordbox_missing_meta_no_require():
 
 
 def test_serato_basic():
-    tracks = pp.parse(SERATO_FILE)
+    tracks = PlaylistParser(SERATO_FILE).to_list()
     assert len(tracks) == 4
     assert tracks[0].year > 0
     assert tracks[2].artist == "Unknown Artist"
 
 
 def test_serato_as_dict_keys():
-    tracks = pp.parse(SERATO_FILE)
+    tracks = PlaylistParser(SERATO_FILE).to_list()
     # Serato only exposes title, artist, year
     d = tracks[0].as_dict()
     assert "year" in d
@@ -128,13 +127,13 @@ def test_serato_require_title_missing(tmp_path):
     )
 
     with pytest.raises(MissingFieldError) as exc_info:
-        pp.parse(path, require=["title"])
+        PlaylistParser(path, require=["title"]).to_list()
     assert exc_info.value.field == "title"
 
 
 def test_serato_require_year_missing():
     with pytest.raises(MissingFieldError) as exc_info:
-        pp.parse(SERATO_FILE, require=["year"])
+        PlaylistParser(SERATO_FILE, require=["year"]).to_list()
     assert exc_info.value.field == "year"
 
 
@@ -142,7 +141,7 @@ def test_serato_require_year_missing():
 
 
 def test_traktor_basic():
-    tracks = pp.parse(TRAKTOR_FILE)
+    tracks = PlaylistParser(TRAKTOR_FILE).to_list()
     assert len(tracks) == 4
     assert tracks[0].year > 0
     assert tracks[0].duration > 0
@@ -150,7 +149,7 @@ def test_traktor_basic():
 
 
 def test_traktor_missing_playtime_defaults_to_zero():
-    tracks = pp.parse(TRAKTOR_MISSING_PLAYTIME)
+    tracks = PlaylistParser(TRAKTOR_MISSING_PLAYTIME).to_list()
     assert len(tracks) == 2
     assert tracks[0].duration == 0
     assert tracks[1].duration == 243
@@ -158,7 +157,7 @@ def test_traktor_missing_playtime_defaults_to_zero():
 
 def test_traktor_require_duration_raises_when_playtime_missing():
     with pytest.raises(MissingFieldError) as exc_info:
-        pp.parse(TRAKTOR_MISSING_PLAYTIME, require=["duration"])
+        PlaylistParser(TRAKTOR_MISSING_PLAYTIME, require=["duration"]).to_list()
     assert exc_info.value.field == "duration"
 
 
@@ -174,7 +173,7 @@ def test_traktor_require_duration_raises_when_playtime_missing():
 )
 def test_require_unsupported_field_raises(file_path, required_field):
     with pytest.raises(MissingFieldError) as exc_info:
-        pp.parse(file_path, require=[required_field])
+        PlaylistParser(file_path, require=[required_field]).to_list()
     assert exc_info.value.field == required_field
 
 
@@ -182,7 +181,7 @@ def test_require_unsupported_field_raises(file_path, required_field):
 
 
 def test_virtualdj_basic():
-    tracks = pp.parse(VIRTUALDJ_FILE)
+    tracks = PlaylistParser(VIRTUALDJ_FILE).to_list()
     assert len(tracks) == 4
     assert tracks[0].year > 0
     assert tracks[0].duration > 0
@@ -193,21 +192,21 @@ def test_virtualdj_require_year():
     with pytest.raises(MissingFieldError) as exc_info:
         # The "Orkidea" track has empty year; use bpm requirement to trigger on it
         # Actually the track with empty year also has a duration, so require year:
-        pp.parse(VIRTUALDJ_FILE, require=["year"])
+        PlaylistParser(VIRTUALDJ_FILE, require=["year"]).to_list()
     assert exc_info.value.field == "year"
 
 
 def test_virtualdj_require_bpm():
     with pytest.raises(MissingFieldError) as exc_info:
-        pp.parse(DATA / "virtualdj-missing-bpm.csv", require=["bpm"])
+        PlaylistParser(DATA / "virtualdj-missing-bpm.csv", require=["bpm"]).to_list()
     assert exc_info.value.field == "bpm"
 
 
 def test_duration_consistency():
-    rb = pp.parse(REKORDBOX_FILE)
-    en = pp.parse(ENGINE_FILE)
-    tr = pp.parse(TRAKTOR_FILE)
-    vj = pp.parse(VIRTUALDJ_FILE)
+    rb = PlaylistParser(REKORDBOX_FILE).to_list()
+    en = PlaylistParser(ENGINE_FILE).to_list()
+    tr = PlaylistParser(TRAKTOR_FILE).to_list()
+    vj = PlaylistParser(VIRTUALDJ_FILE).to_list()
 
     for i in range(len(rb)):
         assert pytest.approx(rb[i].duration, abs=1) == en[i].duration

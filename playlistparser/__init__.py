@@ -81,11 +81,16 @@ class PlaylistParser:
 
     Example::
 
-        parser = PlaylistParser("set.nml", require=["title", "year"])
-        for track in parser:
+        pl = PlaylistParser("set.nml")
+        for track in pl:  # streaming — no materialisation
             print(track)
-        print(len(parser))  # materialises if not yet iterated
-        print(parser.tracks[0])  # lazy property
+
+        tracks = PlaylistParser("set.nml").to_list()  # explicit materialisation
+
+        pl = PlaylistParser("history.csv")
+        print(pl.format)  # PlaylistType.SERATO / ENGINE / VIRTUALDJ
+        print(pl.track_count)  # materialises once, cached thereafter
+        print(pl.total_duration)  # seconds
     """
 
     def __init__(
@@ -116,35 +121,39 @@ class PlaylistParser:
             # .csv → resolved_type stays None until first access
 
     @property
-    def as_type(self) -> PlaylistType:
-        """Detected playlist format (alias for :attr:`playlist_type`)."""
-        return self.playlist_type
-
-    @property
-    def playlist_type(self) -> PlaylistType:
+    def format(self) -> PlaylistType:
         """Format of the playlist, detected lazily for CSV files."""
         if self.resolved_type is None:
             self.resolved_type = sniff_csv(self.path)
         return self.resolved_type
 
     @property
-    def tracks(self) -> list[Track]:
-        """All tracks, materialised lazily on first access."""
-        if self.cached_tracks is None:
-            self.cached_tracks = list(self.stream())
-        return self.cached_tracks
+    def track_count(self) -> int:
+        """Total number of tracks (materialises if not yet accessed)."""
+        return len(self.materialise())
 
     @property
     def total_duration(self) -> int:
-        return sum(t.duration for t in self.tracks)
+        """Sum of all track durations in seconds (materialises if not yet accessed)."""
+        return sum(t.duration for t in self.materialise())
 
     def __iter__(self) -> Iterator[Track]:
-        """Yield tracks one by one without materialising the whole list."""
+        """Yield tracks one by one; always a fresh streaming pass."""
         yield from self.stream()
 
-    def __len__(self) -> int:
-        """Total number of tracks (materialises if not yet accessed)."""
-        return len(self.tracks)
+    def to_list(self) -> list[Track]:
+        """Materialise all tracks into a list.
+
+        The result is cached; subsequent calls return the same list without
+        re-reading the file.
+        """
+        return self.materialise()
+
+    def materialise(self) -> list[Track]:
+        """Return the cached track list, populating it on first call."""
+        if self.cached_tracks is None:
+            self.cached_tracks = list(self.stream())
+        return self.cached_tracks
 
     def stream(self) -> Iterator[Track]:
         """Route to the correct per-format streaming generator."""
@@ -153,7 +162,7 @@ class PlaylistParser:
             "default_artist": self.default_artist,
             "logger": self.logger,
         }
-        pt = self.playlist_type
+        pt = self.format
         unsupported = self.require - SUPPORTED_FIELDS_BY_TYPE.get(pt, frozenset())
         if unsupported:
             raise MissingFieldError(sorted(unsupported)[0])
@@ -172,60 +181,6 @@ class PlaylistParser:
             raise UnknownFormatError(self.path)
 
 
-def detect_format(path: str | os.PathLike[str]) -> PlaylistType:
-    """Detect and return the :class:`PlaylistType` for *path*."""
-    return resolve_format(Path(path))
-
-
-def iter_tracks(
-    path: str | os.PathLike[str],
-    *,
-    require: Iterable[FieldName] = (),
-    default_artist: str = "Unknown Artist",
-    as_type: PlaylistType | None = None,
-    logger: logging.Logger | None = None,
-) -> Iterator[Track]:
-    """Stream tracks from *path* without materialising the full list.
-
-    Example::
-
-        for track in iter_tracks("massive.nml"):
-            process(track)
-    """
-    yield from PlaylistParser(
-        path,
-        require=require,
-        default_artist=default_artist,
-        as_type=as_type,
-        logger=logger,
-    )
-
-
-def parse(
-    path: str | os.PathLike[str],
-    *,
-    require: Iterable[FieldName] = (),
-    default_artist: str = "Unknown Artist",
-    as_type: PlaylistType | None = None,
-    logger: logging.Logger | None = None,
-) -> list[Track]:
-    """Parse *path* and return all tracks as a list.
-
-    Example::
-
-        tracks = parse("set.csv", require=["title", "year"])
-    """
-    return list(
-        iter_tracks(
-            path,
-            require=require,
-            default_artist=default_artist,
-            as_type=as_type,
-            logger=logger,
-        ),
-    )
-
-
 __all__ = [
     "FieldName",
     "MalformedPlaylistError",
@@ -235,9 +190,6 @@ __all__ = [
     "PlaylistType",
     "Track",
     "UnknownFormatError",
-    "detect_format",
-    "iter_tracks",
-    "parse",
 ]
 
 __version__ = "4.0.0"

@@ -12,36 +12,31 @@ Free hosted version of this tool:
 
 ## Usage
 
-### Parse a playlist into a list of tracks
+```python
+from playlistparser import PlaylistParser
+```
+
+### Stream tracks (default)
 
 ```python
-from playlistparser import parse
-
-tracks = parse("set.nml")
-for track in tracks:
+for track in PlaylistParser("set.nml"):
     print(track)          # "Artist - Title"
     print(track.bpm, track.duration, track.year)
 ```
 
-### Stream large playlists without holding them all in memory
+### Materialise into a list
 
 ```python
-from playlistparser import iter_tracks
-
-for track in iter_tracks("massive-export.csv"):
-    process(track)
+tracks = PlaylistParser("set.nml").to_list()
 ```
 
-### Use the `PlaylistParser` class when you need format detection or aggregates
+### Format detection and aggregates
 
 ```python
-from playlistparser import PlaylistParser
-
-parser = PlaylistParser("history.csv")
-print(parser.playlist_type)      # PlaylistType.SERATO / ENGINE / VIRTUALDJ (sniffed lazily)
-print(len(parser))               # track count
-print(parser.total_duration)     # sum of track durations in seconds
-print(parser.tracks[0].as_dict())
+pl = PlaylistParser("history.csv")
+print(pl.format)          # PlaylistType.SERATO / ENGINE / VIRTUALDJ (sniffed lazily)
+print(pl.track_count)     # materialises once, cached thereafter
+print(pl.total_duration)  # sum of track durations in seconds
 ```
 
 ### Enforce required fields
@@ -49,10 +44,10 @@ print(parser.tracks[0].as_dict())
 Raise `MissingFieldError` as soon as a row is missing one of the listed fields:
 
 ```python
-from playlistparser import iter_tracks, MissingFieldError
+from playlistparser import PlaylistParser, MissingFieldError
 
 try:
-    for track in iter_tracks("set.nml", require=["title", "bpm", "year"]):
+    for track in PlaylistParser("set.nml", require=["title", "bpm", "year"]):
         ...
 except MissingFieldError as e:
     print(f"Bad row: {e}")
@@ -61,12 +56,12 @@ except MissingFieldError as e:
 If the format itself doesn't expose a required field (e.g. Serato has no `bpm`),
 `MissingFieldError` is raised immediately — no parsing happens.
 
-### Detect the format without parsing
+### Override format detection
 
 ```python
-from playlistparser import detect_format, PlaylistType
+from playlistparser import PlaylistParser, PlaylistType
 
-if detect_format("file.csv") is PlaylistType.VIRTUALDJ:
+for track in PlaylistParser("export.dat", as_type=PlaylistType.ENGINE):
     ...
 ```
 

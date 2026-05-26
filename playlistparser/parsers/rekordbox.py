@@ -1,89 +1,103 @@
-import codecs
 import csv
-from io import StringIO
+import io
+import logging
+from collections.abc import Iterator
+from typing import TYPE_CHECKING
 
-from ..track import Track
-from ..utils import time_str_to_seconds
+from playlistparser.exceptions import MissingFieldError
+from playlistparser.track import Track
+from playlistparser.utils import time_str_to_seconds
+
+if TYPE_CHECKING:
+    from playlistparser import FieldName
+
+logger = logging.getLogger(__name__)
+
+TITLE_COL = "Track Title"
+ARTIST_COL = "Artist"
+TIME_COL = "Time"
+BPM_COL = "BPM"
+YEAR_COL = "Year"
+FILE_COL = "Location"
 
 
-def parser(
-    file_path,
+def get_field(row: list[str], idx: dict[str, int], col: str, default: str = "") -> str:
+    i = idx.get(col)
+    if i is None or i >= len(row):
+        return default
+    return row[i].strip()
+
+
+def iter_tracks(
+    file_path: str,
     *,
-    require_title=True,
-    require_duration=False,
-    require_year=False,
-    require_bpm=False,
-    require_fp=False,
-    default_artist="",
-    verbose=False,
-):
+    require: frozenset[FieldName] = frozenset(),
+    default_artist: str = "Unknown Artist",
+    logger: logging.Logger | None = None,
+) -> Iterator[Track]:
     """
-    Rekordbox supports:
-    - title
-    - artist
-    - year
-    - playtime
-    - bpm
-    - file_path
+    Rekordbox supports: title, artist, year, duration, bpm, file_path.
+
+    The export file is UTF-16 tab-separated.  We wrap the binary stream in
+    :class:`io.TextIOWrapper` so the CSV reader processes it line-by-line
+    without loading the entire file into RAM.
+
+    Yields one :class:`~playlistparser.track.Track` per playlist row.
     """
-    with (
-        open(file_path, "rb") as handle,
-        codecs.EncodedFile(handle, data_encoding="utf-8", file_encoding="utf-16", errors="ignore") as stream,
-    ):
-        reader = csv.DictReader(StringIO(stream.read().decode("utf-8")), delimiter="\t")
+    del logger  # Rekordbox currently raises malformed row errors directly.
+    with open(file_path, "rb") as raw:
+        text = io.TextIOWrapper(raw, encoding="utf-16", errors="replace", newline="")
+        reader = csv.reader(text, delimiter="\t")
 
-        tracks = []
+        try:
+            raw_header = next(reader)
+        except StopIteration:
+            return
 
-        for line in reader:
-            artist = ""
-            title = "Unknown"
-            playtime = 0
-            year = ""
-            bpm = 0
-            file_path = ""
+        header = [h.strip() for h in raw_header]
+        idx: dict[str, int] = {col: i for i, col in enumerate(header)}
 
-            try:
-                title = line["Track Title"].strip()
-            except KeyError:
-                if require_title:
-                    raise ValueError("Title required but not found in file.") from None
+        for lineno, row in enumerate(reader, start=2):
+            title = get_field(row, idx, TITLE_COL)
+            if not title:
+                if "title" in require:
+                    raise MissingFieldError("title", line=lineno)
+                title = "Unknown"
 
-            try:
-                playtime = time_str_to_seconds(line["Time"].strip())
-            except KeyError:
-                if require_duration:
-                    raise ValueError("Duration required but not found in file.") from None
+            raw_time = get_field(row, idx, TIME_COL)
+            if not raw_time:
+                if "duration" in require:
+                    raise MissingFieldError("duration", line=lineno, track_title=title)
+                playtime = 0
+            else:
+                playtime = time_str_to_seconds(raw_time)
 
-            try:
-                bpm = int(float(line["BPM"].strip()))
-            except KeyError:
-                if require_bpm:
-                    raise ValueError("BPM required but not found in file.") from None
+            raw_bpm = get_field(row, idx, BPM_COL)
+            if not raw_bpm:
+                if "bpm" in require:
+                    raise MissingFieldError("bpm", line=lineno, track_title=title)
+                bpm = 0
+            else:
+                try:
+                    bpm = int(float(raw_bpm))
+                except ValueError:
+                    bpm = 0
 
-            try:
-                year = line["Year"].strip()
-            except KeyError:
-                if require_year:
-                    raise ValueError("Year required but not found in file.") from None
+            year = get_field(row, idx, YEAR_COL)
+            if not year and "year" in require:
+                raise MissingFieldError("year", line=lineno, track_title=title)
 
-            try:
-                file_path = line["Location"].strip()
-            except KeyError:
-                if require_fp:
-                    raise ValueError("File paths required but not found in file.") from None
+            fp = get_field(row, idx, FILE_COL)
+            if not fp and "file_path" in require:
+                raise MissingFieldError("file_path", line=lineno, track_title=title)
 
-            artist = line["Artist"].strip()
-            if not artist:
-                artist = default_artist
+            artist = get_field(row, idx, ARTIST_COL) or default_artist
 
-            tracks.append(
-                Track(
-                    title=title,
-                    artist=artist,
-                    year=year,
-                    duration=playtime,
-                    bpm=bpm,
-                    file_path=file_path,
-                )
+            yield Track(
+                title=title,
+                artist=artist,
+                year=year,
+                duration=playtime,
+                bpm=bpm,
+                file_path=fp,
             )
-        return tracks

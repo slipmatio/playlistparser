@@ -1,71 +1,90 @@
-import xml.etree.ElementTree as ET
+import logging
+from collections.abc import Iterator
+from typing import TYPE_CHECKING
 
-from ..track import Track
+from lxml import etree  # type: ignore[import-untyped]  # ty:ignore[unresolved-import]
+
+from playlistparser.exceptions import MissingFieldError
+from playlistparser.track import Track
+
+if TYPE_CHECKING:
+    from playlistparser import FieldName
+
+logger = logging.getLogger(__name__)
 
 
-def parser(
-    file_path,
+def iter_tracks(
+    file_path: str,
     *,
-    require_title=True,
-    require_duration=False,
-    require_year=False,
-    require_bpm=False,
-    require_fp=False,
-    default_artist="",
-    verbose=False,
-):
+    require: frozenset[FieldName] = frozenset(),
+    default_artist: str = "Unknown Artist",
+    logger: logging.Logger | None = None,
+) -> Iterator[Track]:
     """
-    Traktor supports:
-    - title
-    - artist
-    - year
-    - playtime
-    - bpm
+    Traktor NML supports: title, artist, year, duration, bpm.
+
+    Only COLLECTION ENTRYs (those with a ``TITLE`` attribute) are processed;
+    playlist-reference ENTRYs are silently skipped.
+
+    Yields one :class:`~playlistparser.track.Track` per ENTRY.
     """
-    if require_fp:
-        raise NotImplementedError("Traktor parser doesn't support file paths.")
+    log = logger or logging.getLogger(__name__)
+    context = etree.iterparse(file_path, events=("end",), tag="ENTRY")
 
-    tracks = []
-    traktor_xml = ""
-    with open(file_path) as file:
-        traktor_xml = ET.fromstring(file.read())
-
-    entries = traktor_xml.findall("COLLECTION/ENTRY")
-
-    for counter, track in enumerate(entries):
-        playtime = 0
-        year = ""
-        bpm = 0
-
+    for lineno, (event, elem) in enumerate(context, start=1):
+        del event  # iterparse event string; only "end" is used here
+        # Playlist reference entries have no TITLE attribute — skip them.
+        if "TITLE" not in elem.attrib:
+            elem.clear()
+            continue
         try:
-            track_title = track.get("TITLE", "").strip()
-            track_artist = track.get("ARTIST", "").strip()
-            if not track_artist:
-                track_artist = default_artist
+            track_title = (elem.get("TITLE") or "").strip()
+            if not track_title and "title" in require:
+                raise MissingFieldError("title", line=lineno)
 
-            meta = track.find("INFO")
+            track_artist = (elem.get("ARTIST") or "").strip() or default_artist
+
+            playtime = 0
+            year = ""
+            meta = elem.find("INFO")
             if meta is not None:
-                playtime = int(meta.get("PLAYTIME", ""))
-                # key = meta.get("KEY", "")
-                year = meta.get("RELEASE_DATE", "")
-                if verbose:  # pragma: no cover
-                    print(f"found year: {year}, playtime: {playtime}")
+                raw_playtime = (meta.get("PLAYTIME") or "").strip()
+                if raw_playtime:
+                    try:
+                        playtime = int(raw_playtime)
+                    except ValueError:
+                        playtime = 0
+                if playtime == 0 and "duration" in require:
+                    raise MissingFieldError("duration", line=lineno, track_title=track_title or None)
 
-            tempometa = track.find("TEMPO")
+                year = meta.get("RELEASE_DATE") or ""
+                if not year and "year" in require:
+                    raise MissingFieldError("year", line=lineno, track_title=track_title or None)
+            elif "duration" in require:
+                raise MissingFieldError("duration", line=lineno, track_title=track_title or None)
+            elif "year" in require:
+                raise MissingFieldError("year", line=lineno, track_title=track_title or None)
+
+            bpm = 0
+            tempometa = elem.find("TEMPO")
             if tempometa is not None:
-                bpm = int(float(tempometa.get("BPM", 0)))
+                try:
+                    bpm = int(float(tempometa.get("BPM") or 0))
+                except ValueError, TypeError:
+                    bpm = 0
+            if bpm == 0 and "bpm" in require:
+                raise MissingFieldError("bpm", line=lineno, track_title=track_title or None)
 
-            tracks.append(
-                Track(
-                    title=track_title,
-                    artist=track_artist,
-                    year=year,
-                    duration=playtime,
-                    bpm=bpm,
-                )
+            yield Track(
+                title=track_title,
+                artist=track_artist,
+                year=year,
+                duration=playtime,
+                bpm=bpm,
             )
-        except Exception as e:  # pragma: no cover
-            if verbose:
-                print(f"Skipping line {counter}", e)
-
-    return tracks
+        except MissingFieldError:
+            raise
+        except Exception as exc:
+            log.debug("Skipping entry %d: %s", lineno, exc)
+        finally:
+            elem.clear()

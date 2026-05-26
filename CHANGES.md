@@ -1,5 +1,22 @@
 # Changelog
 
+## 4.0.0 (2026-05-26)
+
+- Breaking: removed `parse()`, `get_tracks()`, `verbose=`, and the five individual `require_*`
+  booleans from `PlaylistParser`. Use `require=[...]` instead.
+- Breaking: all parsers are now streaming generators; the `parser()` wrappers are removed.
+- Feat: top-level `parse()`, `iter_tracks()`, and `detect_format()` convenience functions.
+- Feat: `FieldName` type alias and full exception hierarchy (`PlaylistParserError`,
+  `UnknownFormatError`, `MalformedPlaylistError`, `MissingFieldError`) exported from package root.
+- Feat: `PlaylistParser` accepts `str | os.PathLike`, exposes `path`, `as_type`, `playlist_type`,
+  lazy `tracks` property, and supports `iter()` and `len()`.
+- Fix: all `require=` fields now correctly raise `MissingFieldError` across all parsers.
+- Fix: Traktor yields `duration=0` when `PLAYTIME` is absent instead of crashing.
+- Perf: Rekordbox streams via `io.TextIOWrapper`; Traktor uses `lxml.etree.iterparse`; CSV parsers
+  use `csv.reader` with a header-index map.
+- Refactor: `Track` is now a frozen, slotted dataclass with equality, hash, and repr.
+- Refactor: explicit `encoding=` on every `open()` call; `logging` replaces `print()`.
+
 ## 3.0.0-beta.11 (2026-05-21)
 
 - docs: document installing

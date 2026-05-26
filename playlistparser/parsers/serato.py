@@ -1,50 +1,74 @@
-from csv import DictReader
+import csv
+import logging
+from collections.abc import Iterator
+from typing import TYPE_CHECKING
 
-from ..track import Track
+from playlistparser.exceptions import MissingFieldError
+from playlistparser.track import Track
+
+if TYPE_CHECKING:
+    from playlistparser import FieldName
+
+logger = logging.getLogger(__name__)
+
+NAME_COL = "name"
+ARTIST_COL = "artist"
+YEAR_COL = "year"
 
 
-def parser(
-    file_path,
+def get_field(row: list[str], idx: dict[str, int], col: str, default: str = "") -> str:
+    i = idx.get(col)
+    if i is None or i >= len(row):
+        return default
+    return row[i].strip()
+
+
+def iter_tracks(
+    file_path: str,
     *,
-    require_title=True,
-    require_duration=False,
-    require_year=False,
-    require_bpm=False,
-    require_fp=False,
-    default_artist="",
-    verbose=False,
-):
+    require: frozenset[FieldName] = frozenset(),
+    default_artist: str = "Unknown Artist",
+    logger: logging.Logger | None = None,
+) -> Iterator[Track]:
     """
-    Serato supports:
-    - title
-    - artist
-    - year
+    Serato supports: title, artist, year.
+
+    The first data row is a session date header — skip it (lineno == 2).
+
+    Yields one :class:`~playlistparser.track.Track` per playlist row.
     """
-    if require_duration:
-        raise NotImplementedError("Serato parser doesn't support require_duration.")
+    log = logger or logging.getLogger(__name__)
+    with open(file_path, encoding="utf-8", newline="") as f:
+        reader = csv.reader(f)
+        try:
+            raw_header = next(reader)
+        except StopIteration:
+            return
 
-    if require_year:
-        raise NotImplementedError("Serato parser doesn't support require_year.")
+        header = [h.strip() for h in raw_header]
+        idx: dict[str, int] = {col: i for i, col in enumerate(header)}
 
-    if require_bpm:
-        raise NotImplementedError("Serato parser doesn't support require_bpm.")
+        for lineno, row in enumerate(reader, start=2):
+            # First data row is the session timestamp line — skip it.
+            if lineno == 2:
+                continue
 
-    if require_fp:
-        raise NotImplementedError("Serato parser doesn't support file paths.")
+            try:
+                title = get_field(row, idx, NAME_COL)
+                if not title and "title" in require:
+                    raise MissingFieldError("title", line=lineno)
 
-    with open(file_path) as file:
-        reader = DictReader(file)
-        tracks = []
-        for counter, line in enumerate(reader):
-            if counter > 0:
-                try:
-                    title = line["name"].strip()
-                    artist = line["artist"].strip()
-                    if not artist:
-                        artist = default_artist
-                    year = line["year"].strip()
-                    tracks.append(Track(title=title, artist=artist, year=year))
-                except Exception as e:  # pragma: no cover
-                    if verbose:
-                        print(f"Skipping line {counter}", e)
-        return tracks
+                artist = get_field(row, idx, ARTIST_COL)
+                if not artist and "artist" in require:
+                    raise MissingFieldError("artist", line=lineno, track_title=title or None)
+                artist = artist or default_artist
+
+                year = get_field(row, idx, YEAR_COL)
+                if not year and "year" in require:
+                    raise MissingFieldError("year", line=lineno, track_title=title or None)
+
+                yield Track(title=title, artist=artist, year=year)
+            except MissingFieldError:
+                raise
+            except Exception as exc:
+                log.debug("Skipping line %d: %s", lineno, exc)

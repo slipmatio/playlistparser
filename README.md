@@ -12,6 +12,8 @@ Free hosted version of this tool:
 
 ## Developing
 
+- `uv run ruff format` - format
+- `uv run ruff check --fix --extend-fixable F401` - lint
 - `uv run pytest` - run test suite
 - `uv run ty check` - typecheck
 

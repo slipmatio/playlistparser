@@ -2,6 +2,8 @@
 
 ## 4.0.0 (2026-05-26)
 
+Performance upgrades, better typing, better error handling and general dx.
+
 - Breaking: removed `parse()`, `get_tracks()`, `verbose=`, and the five individual `require_*`
   booleans from v3. Use `require=[...]` on `PlaylistParser` instead.
 - Breaking: all parsers are now streaming generators; the v3 `parser()` wrappers are removed.

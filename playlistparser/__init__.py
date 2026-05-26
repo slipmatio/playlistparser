@@ -2,29 +2,28 @@
 
 import csv
 import logging
-import os
-from collections.abc import Iterable, Iterator
 from enum import IntEnum
 from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
-from .exceptions import MalformedPlaylistError, MissingFieldError, PlaylistParserError, UnknownFormatError
-from .parsers.engine import iter_tracks as engine_iter
-from .parsers.rekordbox import iter_tracks as rekordbox_iter
-from .parsers.serato import iter_tracks as serato_iter
-from .parsers.traktor import iter_tracks as traktor_iter
-from .parsers.virtualdj import iter_tracks as virtualdj_iter
-from .track import Track
+from playlistparser.exceptions import (
+    MalformedPlaylistError,
+    MissingFieldError,
+    PlaylistParserError,
+    UnknownFormatError,
+)
+from playlistparser.parsers.engine import iter_tracks as engine_iter
+from playlistparser.parsers.rekordbox import iter_tracks as rekordbox_iter
+from playlistparser.parsers.serato import iter_tracks as serato_iter
+from playlistparser.parsers.traktor import iter_tracks as traktor_iter
+from playlistparser.parsers.virtualdj import iter_tracks as virtualdj_iter
+from playlistparser.track import Track
 
-# ---------------------------------------------------------------------------
-# Public type aliases
-# ---------------------------------------------------------------------------
+if TYPE_CHECKING:
+    import os
+    from collections.abc import Iterable, Iterator
 
 FieldName = Literal["title", "artist", "duration", "year", "bpm", "file_path"]
-
-# ---------------------------------------------------------------------------
-# PlaylistType enum
-# ---------------------------------------------------------------------------
 
 
 class PlaylistType(IntEnum):
@@ -45,14 +44,9 @@ SUPPORTED_FIELDS_BY_TYPE: dict[PlaylistType, frozenset[FieldName]] = {
 }
 
 
-# ---------------------------------------------------------------------------
-# Format detection helpers
-# ---------------------------------------------------------------------------
-
-
 def sniff_csv(path: Path) -> PlaylistType:
     """Read the first header row of a CSV file and return its format."""
-    with open(path, encoding="utf-8", newline="") as f:
+    with path.open(encoding="utf-8", newline="") as f:
         try:
             header = next(csv.reader(f))
         except StopIteration:
@@ -60,12 +54,11 @@ def sniff_csv(path: Path) -> PlaylistType:
 
     if header and "\ufeff" in header[0]:
         return PlaylistType.VIRTUALDJ
-    elif "#" in header:
+    if "#" in header:
         return PlaylistType.ENGINE
-    elif "name" in header:
+    if "name" in header:
         return PlaylistType.SERATO
-    else:
-        raise UnknownFormatError(path)
+    raise UnknownFormatError(path)
 
 
 def resolve_format(path: Path) -> PlaylistType:
@@ -78,11 +71,6 @@ def resolve_format(path: Path) -> PlaylistType:
     if name.endswith(".csv"):
         return sniff_csv(path)
     raise UnknownFormatError(path)
-
-
-# ---------------------------------------------------------------------------
-# PlaylistParser
-# ---------------------------------------------------------------------------
 
 
 class PlaylistParser:
@@ -108,8 +96,8 @@ class PlaylistParser:
         as_type: PlaylistType | None = None,
         logger: logging.Logger | None = None,
         default_artist: str = "Unknown Artist",
-    ):
-        self.path = Path(os.fspath(file_path))
+    ) -> None:
+        self.path = Path(file_path)
         self.logger = logger or logging.getLogger(__name__)
         self.default_artist = default_artist
         self.require: frozenset[FieldName] = frozenset(require)  # type: ignore[arg-type]
@@ -126,10 +114,6 @@ class PlaylistParser:
             elif not name.endswith(".csv"):
                 raise UnknownFormatError(self.path)
             # .csv → resolved_type stays None until first access
-
-    # ------------------------------------------------------------------
-    # Public properties
-    # ------------------------------------------------------------------
 
     @property
     def as_type(self) -> PlaylistType:
@@ -150,9 +134,9 @@ class PlaylistParser:
             self.cached_tracks = list(self.stream())
         return self.cached_tracks
 
-    # ------------------------------------------------------------------
-    # Iteration / sizing
-    # ------------------------------------------------------------------
+    @property
+    def total_duration(self) -> int:
+        return sum(t.duration for t in self.tracks)
 
     def __iter__(self) -> Iterator[Track]:
         """Yield tracks one by one without materialising the whole list."""
@@ -161,10 +145,6 @@ class PlaylistParser:
     def __len__(self) -> int:
         """Total number of tracks (materialises if not yet accessed)."""
         return len(self.tracks)
-
-    # ------------------------------------------------------------------
-    # Streaming
-    # ------------------------------------------------------------------
 
     def stream(self) -> Iterator[Track]:
         """Route to the correct per-format streaming generator."""
@@ -192,14 +172,9 @@ class PlaylistParser:
             raise UnknownFormatError(self.path)
 
 
-# ---------------------------------------------------------------------------
-# Module-level convenience functions
-# ---------------------------------------------------------------------------
-
-
 def detect_format(path: str | os.PathLike[str]) -> PlaylistType:
     """Detect and return the :class:`PlaylistType` for *path*."""
-    return resolve_format(Path(os.fspath(path)))
+    return resolve_format(Path(path))
 
 
 def iter_tracks(
@@ -247,13 +222,9 @@ def parse(
             default_artist=default_artist,
             as_type=as_type,
             logger=logger,
-        )
+        ),
     )
 
-
-# ---------------------------------------------------------------------------
-# Package metadata
-# ---------------------------------------------------------------------------
 
 __all__ = [
     "FieldName",

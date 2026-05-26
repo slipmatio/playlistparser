@@ -1,4 +1,7 @@
-import os
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import os
 
 
 class PlaylistParserError(Exception):
@@ -13,7 +16,7 @@ class UnknownFormatError(PlaylistParserError):
         super().__init__(
             f"Cannot determine playlist format for '{path}'. "
             f"Supported extensions: {exts}. "
-            "Use the as_type= parameter to override detection."
+            "Use the as_type= parameter to override detection.",
         )
 
 

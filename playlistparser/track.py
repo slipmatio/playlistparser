@@ -67,8 +67,7 @@ class Track:
             return "0:00"
         string = str(timedelta(seconds=self.duration))
         # '0:00:12' → '00:12'
-        if string.startswith("0:"):
-            string = string[2:]
+        string = string.removeprefix("0:")
         # '00:12' → '0:12'
         if string.startswith("00:"):
             string = "0:" + string[3:]
@@ -77,7 +76,7 @@ class Track:
             string = string[1:]
         return string
 
-    def as_dict(self, no_meta: bool = False) -> dict[str, str | int]:
+    def as_dict(self, *, no_meta: bool = False) -> dict[str, str | int]:
         song: dict[str, str | int] = {"title": self.title, "artist": self.artist}
         if no_meta:
             return song

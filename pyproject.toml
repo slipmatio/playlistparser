@@ -60,17 +60,91 @@ exclude = [
 ]
 
 [tool.ruff.lint]
-select = ["E", "F", "UP", "B", "SIM", "I", "E402", "PLC0415"]
-ignore = ["SIM108"]
+select = [
+    "E", "W",       # pycodestyle
+    "F",            # pyflakes
+    "I",            # isort
+    "N",            # pep8-naming
+    "D",            # pydocstyle
+    "UP",           # pyupgrade
+    "ANN",          # flake8-annotations (force type hints)
+    "ASYNC",        # flake8-async
+    "S",            # flake8-bandit (security)
+    "BLE",          # blind except
+    "FBT",          # boolean-trap (positional bools)
+    "B",            # bugbear
+    "A",            # builtins shadowing
+    "COM",          # commas
+    "C4",           # comprehensions
+    "DTZ",          # datetimez (naive datetime)
+    "T10",          # debugger (no pdb)
+    "EM",           # error messages (no f-strings in raise)
+    "EXE",          # executable
+    "FA",           # future-annotations
+    "ISC",          # implicit-str-concat
+    "ICN",          # import-conventions
+    "LOG",          # logging
+    "G",            # logging-format
+    "INP",          # no implicit namespace packages
+    "PIE",          # misc lints
+    "T20",          # no print()
+    "PYI",          # stub-file lints
+    "PT",           # pytest-style
+    "Q",            # quotes
+    "RSE",          # raise
+    "RET",          # return
+    "SLF",          # private-member access
+    "SLOT",         # __slots__
+    "SIM",          # simplify
+    "TID",          # tidy-imports
+    "TC",           # type-checking blocks
+    "ARG",          # unused-arguments
+    "PTH",          # use pathlib, not os.path
+    "TD",           # todos formatted
+    "FIX",          # no FIXME left behind
+    "ERA",          # eradicate commented-out code
+    "PGH",          # pygrep-hooks
+    "PL",           # pylint (PLC/PLE/PLR/PLW)
+    "TRY",          # tryceratops (exception antipatterns)
+    "FLY",          # f-string conversion
+    "PERF",         # perflint
+    "FURB",         # refurb (modern idioms)
+    "RUF",          # ruff-specific
+    "C90",          # mccabe complexity
+]
+ignore = [
+    "SIM108",
+    # pydocstyle pairwise conflicts (pick D211/D212 style)
+    "D203", "D213",
+    # never demand a docstring exist — only lint the ones we choose to write
+    "D100", "D101", "D102", "D103", "D104", "D105", "D106", "D107",
+    # formatter conflicts
+    "COM812", "ISC001",
+    # pedantic with little payoff for this codebase
+    "EM101", "EM102",
+    "TRY003", "TRY301",
+    # allow typing.Any when needed
+    "ANN401",
+]
 fixable = ["ALL"]
-unfixable = ["F401"]
+unfixable = ["F401", "ERA001"]
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 [tool.ruff.lint.mccabe]
-max-complexity = 10
+max-complexity = 14
 
 [tool.ruff.lint.per-file-ignores]
 "*.ipynb" = ["E402", "I001"]
+"tests/**/*.py" = [
+    "S101",       # asserts are the whole point of tests
+    "PLR2004",    # magic numbers fine in test data
+    "ANN",        # don't require annotations on tests
+    "D",          # don't require docstrings on tests
+    "SLF001",     # tests poke privates
+    "ARG",        # unused fixtures
+    "INP001",     # tests dir layout
+    "PT011",      # bare pytest.raises sometimes useful
+]
 
 [tool.ruff.lint.flake8-quotes]
 docstring-quotes = "double"
@@ -88,7 +162,9 @@ known-first-party = ["playlistparser"]
 
 [tool.ruff.lint.pylint]
 max-args = 8
-max-statements = 80
+max-statements = 50
+max-branches = 15
+max-returns = 6
 
 [tool.ruff.lint.flake8-tidy-imports]
 ban-relative-imports = "all"

@@ -1,5 +1,4 @@
 import logging
-from collections.abc import Iterator
 from typing import TYPE_CHECKING
 
 from lxml import etree  # type: ignore[import-untyped]  # ty:ignore[unresolved-import]
@@ -8,20 +7,21 @@ from playlistparser.exceptions import MissingFieldError
 from playlistparser.track import Track
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from playlistparser import FieldName
 
 logger = logging.getLogger(__name__)
 
 
-def iter_tracks(
+def iter_tracks(  # noqa: C901, PLR0912 -- many branches needed for optional NML fields
     file_path: str,
     *,
     require: frozenset[FieldName] = frozenset(),
     default_artist: str = "Unknown Artist",
     logger: logging.Logger | None = None,
 ) -> Iterator[Track]:
-    """
-    Traktor NML supports: title, artist, year, duration, bpm.
+    """Traktor NML supports: title, artist, year, duration, bpm.
 
     Only COLLECTION ENTRYs (those with a ``TITLE`` attribute) are processed;
     playlist-reference ENTRYs are silently skipped.
@@ -84,7 +84,7 @@ def iter_tracks(
             )
         except MissingFieldError:
             raise
-        except Exception as exc:
+        except (AttributeError, ValueError, TypeError) as exc:
             log.debug("Skipping entry %d: %s", lineno, exc)
         finally:
             elem.clear()

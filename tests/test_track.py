@@ -71,7 +71,7 @@ def test_nfc_normalisation_artist():
 
 
 @pytest.mark.parametrize(
-    "seconds,expected",
+    ("seconds", "expected"),
     [
         (0, "0:00"),
         (10, "0:10"),

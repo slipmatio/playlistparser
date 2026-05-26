@@ -61,7 +61,7 @@ def test_time_str_to_seconds(raw, seconds):
 # detect_format
 
 
-@pytest.mark.parametrize("file_path,expected_type", ALL_FORMAT_FILES)
+@pytest.mark.parametrize(("file_path", "expected_type"), ALL_FORMAT_FILES)
 def test_detect_format(file_path, expected_type):
     assert pp.detect_format(file_path) == expected_type
 
@@ -181,7 +181,7 @@ def test_playlist_parser_format_override_uses_requested_parser_despite_extension
     assert [track.title for track in parser.tracks] == EXPECTED_TITLES
 
 
-@pytest.mark.parametrize("file_path,expected_type", ALL_FORMAT_FILES)
+@pytest.mark.parametrize(("file_path", "expected_type"), ALL_FORMAT_FILES)
 def test_playlist_parser_detects_format(file_path, expected_type):
     p = PlaylistParser(file_path)
     assert p.playlist_type == expected_type
@@ -205,9 +205,6 @@ def test_unknown_error_message_lists_extensions():
     assert ".nml" in msg
     assert ".csv" in msg
     assert "as_type=" in msg
-
-
-# logger= parameter
 
 
 def test_logger_receives_records(caplog, monkeypatch):

@@ -3,7 +3,6 @@
 from pathlib import Path
 
 import pytest
-from pytest import approx
 
 import playlistparser as pp
 from playlistparser import MissingFieldError
@@ -211,6 +210,6 @@ def test_duration_consistency():
     vj = pp.parse(VIRTUALDJ_FILE)
 
     for i in range(len(rb)):
-        assert approx(rb[i].duration, abs=1) == en[i].duration
-        assert approx(rb[i].duration, abs=1) == tr[i].duration
-        assert approx(rb[i].duration, abs=1) == vj[i].duration
+        assert pytest.approx(rb[i].duration, abs=1) == en[i].duration
+        assert pytest.approx(rb[i].duration, abs=1) == tr[i].duration
+        assert pytest.approx(rb[i].duration, abs=1) == vj[i].duration

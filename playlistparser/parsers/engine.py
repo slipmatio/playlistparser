@@ -1,12 +1,14 @@
 import csv
 import logging
-from collections.abc import Iterator
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from playlistparser.exceptions import MissingFieldError
 from playlistparser.track import Track
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from playlistparser import FieldName
 
 logger = logging.getLogger(__name__)
@@ -19,7 +21,7 @@ LENGTH_COL = "Length"
 FILE_COL = "File name"
 
 
-def get_field(row: list[str], idx: dict[str, int], col: str, default: str = "") -> str:
+def _get_field(row: list[str], idx: dict[str, int], col: str, default: str = "") -> str:
     i = idx.get(col)
     if i is None or i >= len(row):
         return default
@@ -33,13 +35,12 @@ def iter_tracks(
     default_artist: str = "Unknown Artist",
     logger: logging.Logger | None = None,
 ) -> Iterator[Track]:
-    """
-    Engine DJ supports: title, artist, year, duration, bpm, file_path.
+    """Engine DJ supports: title, artist, year, duration, bpm, file_path.
 
     Yields one :class:`~playlistparser.track.Track` per playlist row.
     """
     log = logger or logging.getLogger(__name__)
-    with open(file_path, encoding="utf-8", newline="") as f:
+    with Path(file_path).open(encoding="utf-8", newline="") as f:
         reader = csv.reader(f)
         try:
             raw_header = next(reader)
@@ -51,19 +52,19 @@ def iter_tracks(
 
         for lineno, row in enumerate(reader, start=2):
             try:
-                title = get_field(row, idx, TITLE_COL)
+                title = _get_field(row, idx, TITLE_COL)
                 if not title:
                     if "title" in require:
                         raise MissingFieldError("title", line=lineno)
                     title = "Unknown"
 
-                artist = get_field(row, idx, ARTIST_COL) or default_artist
+                artist = _get_field(row, idx, ARTIST_COL) or default_artist
 
-                year = get_field(row, idx, YEAR_COL)
+                year = _get_field(row, idx, YEAR_COL)
                 if not year and "year" in require:
                     raise MissingFieldError("year", line=lineno, track_title=title)
 
-                raw_bpm = get_field(row, idx, BPM_COL)
+                raw_bpm = _get_field(row, idx, BPM_COL)
                 if not raw_bpm and "bpm" in require:
                     raise MissingFieldError("bpm", line=lineno, track_title=title)
                 try:
@@ -71,7 +72,7 @@ def iter_tracks(
                 except ValueError:
                     bpm = 0
 
-                raw_duration = get_field(row, idx, LENGTH_COL)
+                raw_duration = _get_field(row, idx, LENGTH_COL)
                 if not raw_duration and "duration" in require:
                     raise MissingFieldError("duration", line=lineno, track_title=title)
                 try:
@@ -79,7 +80,7 @@ def iter_tracks(
                 except ValueError:
                     playtime = 0
 
-                fp = get_field(row, idx, FILE_COL)
+                fp = _get_field(row, idx, FILE_COL)
                 if not fp and "file_path" in require:
                     raise MissingFieldError("file_path", line=lineno, track_title=title)
 
@@ -93,5 +94,5 @@ def iter_tracks(
                 )
             except MissingFieldError:
                 raise
-            except Exception as exc:
+            except (csv.Error, IndexError, ValueError, TypeError) as exc:
                 log.debug("Skipping line %d: %s", lineno, exc)

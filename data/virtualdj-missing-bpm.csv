@@ -1,0 +1,4 @@
+﻿sep=,
+"Title","Artist","Remix","Length","Bpm","Key","Year"
+"Track With BPM","Artist One","","04:03","130.0","B","2008"
+"Track Without BPM","Artist Two","","03:22","","Em","2005"

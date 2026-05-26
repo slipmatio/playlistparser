@@ -1,60 +1,81 @@
 import csv
+import logging
+from pathlib import Path
+from typing import TYPE_CHECKING
 
-from ..track import Track
-from ..utils import time_str_to_seconds
+from playlistparser.exceptions import MissingFieldError
+from playlistparser.track import Track
+from playlistparser.utils import csv_field, time_str_to_seconds
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
+    from playlistparser import FieldName
+
+logger = logging.getLogger(__name__)
+
+TITLE_COL = "Title"
+ARTIST_COL = "Artist"
+LENGTH_COL = "Length"
+BPM_COL = "Bpm"
+YEAR_COL = "Year"
 
 
-def parser(
-    file_path,
+def iter_tracks(
+    file_path: str,
     *,
-    require_title=True,
-    require_duration=False,
-    require_year=False,
-    require_bpm=False,
-    require_fp=False,
-    default_artist="",
-    verbose=False,
-):
+    require: frozenset[FieldName] = frozenset(),
+    default_artist: str = "Unknown Artist",
+) -> Iterator[Track]:
+    """VirtualDJ supports: title, artist, year, duration, bpm.
+
+    The first row is the BOM+``sep=,`` directive; the second row is the real
+    header.  We skip row 1 and build the index map from row 2.
+
+    Yields one :class:`~playlistparser.track.Track` per playlist row.
     """
-    VirtualDJ supports:
-    - title
-    - artist
-    - year
-    - playtime
-    - bpm
-    """
-    if require_duration:
-        raise NotImplementedError("VirtualDJ parser doesn't support require_duration.")
+    # utf-8-sig strips the BOM so row 0 reads as plain 'sep=,'
+    with Path(file_path).open(encoding="utf-8-sig", newline="") as f:
+        reader = csv.reader(f)
+        try:
+            next(reader)  # skip 'sep=,' directive row
+            raw_header = next(reader)
+        except StopIteration:
+            return
 
-    if require_year:
-        raise NotImplementedError("VirtualDJ parser doesn't support require_year.")
+        headers = [header.strip() for header in raw_header]
+        columns: dict[str, int] = {name: position for position, name in enumerate(headers)}
 
-    if require_bpm:
-        raise NotImplementedError("VirtualDJ parser doesn't support require_bpm.")
+        for lineno, row in enumerate(reader, start=3):
+            try:
+                title = csv_field(row, columns, TITLE_COL)
+                if not title and "title" in require:
+                    raise MissingFieldError("title", line=lineno)
 
-    if require_fp:
-        raise NotImplementedError("VirtualDJ parser doesn't support file paths.")
+                artist = csv_field(row, columns, ARTIST_COL) or default_artist
 
-    with open(file_path) as file:
-        reader = csv.DictReader(file, fieldnames=["Title", "Artist", "Remix", "Length", "Bpm", "Key", "Year"])
-        tracks = []
-        for counter, line in enumerate(reader):
-            if counter > 1:
+                raw_length = csv_field(row, columns, LENGTH_COL)
                 try:
-                    title = line["Title"].strip()
-                    artist = line["Artist"].strip()
-                    if not artist:
-                        artist = default_artist
+                    playtime = time_str_to_seconds(raw_length) if raw_length else 0
+                except ValueError, AttributeError:
+                    playtime = 0
+                if playtime == 0 and "duration" in require:
+                    raise MissingFieldError("duration", line=lineno, track_title=title or None)
 
-                    playtime = time_str_to_seconds(line["Length"].strip())
-                    bpm = int(float(line["Bpm"].strip()))
-                    try:
-                        year = line["Year"].strip()
-                    except KeyError:
-                        year = ""
-                    tracks.append(Track(title=title, artist=artist, year=year, duration=playtime, bpm=bpm))
-                except Exception as e:  # pragma: no cover
-                    if verbose:
-                        print(f"Skipping line {counter}", e)
+                raw_bpm = csv_field(row, columns, BPM_COL)
+                try:
+                    bpm = int(float(raw_bpm)) if raw_bpm else 0
+                except ValueError, AttributeError:
+                    bpm = 0
+                if bpm == 0 and "bpm" in require:
+                    raise MissingFieldError("bpm", line=lineno, track_title=title or None)
 
-        return tracks
+                year = csv_field(row, columns, YEAR_COL)
+                if not year and "year" in require:
+                    raise MissingFieldError("year", line=lineno, track_title=title or None)
+
+                yield Track(title=title, artist=artist, year=year, duration=playtime, bpm=bpm)
+            except MissingFieldError:
+                raise
+            except (csv.Error, IndexError, ValueError, TypeError) as exc:
+                logger.debug("Skipping line %d: %s", lineno, exc)

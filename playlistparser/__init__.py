@@ -1,13 +1,26 @@
-from collections.abc import Callable
-from csv import DictReader
+import csv
 from enum import IntEnum
+from pathlib import Path
+from typing import TYPE_CHECKING, Literal
 
-from .parsers.engine import parser as engine_parser
-from .parsers.rekordbox import parser as rekordbox_parser
-from .parsers.serato import parser as serato_parser
-from .parsers.traktor import parser as traktor_parser
-from .parsers.virtualdj import parser as virtualdj_parser
-from .track import Track
+from playlistparser.exceptions import (
+    MalformedPlaylistError,
+    MissingFieldError,
+    PlaylistParserError,
+    UnknownFormatError,
+)
+from playlistparser.parsers.engine import iter_tracks as engine_iter
+from playlistparser.parsers.rekordbox import iter_tracks as rekordbox_iter
+from playlistparser.parsers.serato import iter_tracks as serato_iter
+from playlistparser.parsers.traktor import iter_tracks as traktor_iter
+from playlistparser.parsers.virtualdj import iter_tracks as virtualdj_iter
+from playlistparser.track import Track
+
+if TYPE_CHECKING:
+    import os
+    from collections.abc import Iterable, Iterator
+
+FieldName = Literal["title", "artist", "duration", "year", "bpm", "file_path"]
 
 
 class PlaylistType(IntEnum):
@@ -19,94 +32,158 @@ class PlaylistType(IntEnum):
     VIRTUALDJ = 5
 
 
+SUPPORTED_FIELDS_BY_TYPE: dict[PlaylistType, frozenset[FieldName]] = {
+    PlaylistType.ENGINE: frozenset({"title", "artist", "duration", "year", "bpm", "file_path"}),
+    PlaylistType.REKORDBOX: frozenset({"title", "artist", "duration", "year", "bpm", "file_path"}),
+    PlaylistType.SERATO: frozenset({"title", "artist", "year"}),
+    PlaylistType.TRAKTOR: frozenset({"title", "artist", "duration", "year", "bpm"}),
+    PlaylistType.VIRTUALDJ: frozenset({"title", "artist", "duration", "year", "bpm"}),
+}
+
+
+def sniff_csv(path: Path) -> PlaylistType:
+    """Read the first header row of a CSV file and return its format."""
+    with path.open(encoding="utf-8", newline="") as f:
+        try:
+            header = next(csv.reader(f))
+        except StopIteration:
+            raise UnknownFormatError(path) from None
+
+    if header and "\ufeff" in header[0]:
+        return PlaylistType.VIRTUALDJ
+    if "#" in header:
+        return PlaylistType.ENGINE
+    if "name" in header:
+        return PlaylistType.SERATO
+    raise UnknownFormatError(path)
+
+
+def resolve_format(path: Path) -> PlaylistType:
+    """Return the :class:`PlaylistType` for *path* (does I/O for CSV)."""
+    name = path.name
+    if name.endswith(".nml"):
+        return PlaylistType.TRAKTOR
+    if name.endswith(".txt"):
+        return PlaylistType.REKORDBOX
+    if name.endswith(".csv"):
+        return sniff_csv(path)
+    raise UnknownFormatError(path)
+
+
 class PlaylistParser:
+    """Parse a DJ playlist file.
+
+    Accepts a ``str`` or :class:`os.PathLike` path.  Format detection is
+    lazy for CSV files (no I/O in the constructor).
+
+    Example::
+
+        pl = PlaylistParser("set.nml")
+        for track in pl:  # streaming — no materialisation
+            print(track)
+
+        tracks = PlaylistParser("set.nml").to_list()  # explicit materialisation
+
+        pl = PlaylistParser("history.csv")
+        print(pl.playlist_type)  # PlaylistType.SERATO / ENGINE / VIRTUALDJ
+        print(pl.track_count)  # materialises once, cached thereafter
+        print(pl.total_duration)  # seconds
+    """
+
     def __init__(
         self,
-        file_path: str,
+        file_path: str | os.PathLike[str],
         *,
-        require_title: bool = True,
-        require_duration: bool = False,
-        require_year: bool = False,
-        require_bpm: bool = False,
-        require_fp: bool = False,
+        require: Iterable[FieldName] = (),
+        as_type: PlaylistType | None = None,
         default_artist: str = "Unknown Artist",
-        verbose: bool = False,
-    ):
-        self.file_path = file_path
-        self.verbose = verbose
-        self.playlist_type: PlaylistType = PlaylistType.UNKNOWN
-        self.tracks: list[Track] = []
-        self._parser: Callable[[str], list] | None = None
-        self.is_parsed = False
-        self.require_title = require_title
-        self.require_duration = require_duration
-        self.require_bpm = require_bpm
-        self.require_year = require_year
-        self.require_fp = require_fp
+    ) -> None:
+        self.path = Path(file_path)
         self.default_artist = default_artist
+        self.require: frozenset[FieldName] = frozenset(require)  # type: ignore[arg-type]
+        self.resolved_type: PlaylistType | None = as_type
+        self.cached_tracks: list[Track] | None = None
 
-        self._determine_type()
+        # Extension-only detection — no I/O.  CSV sniffing is deferred.
+        if as_type is None:
+            name = self.path.name
+            if name.endswith(".nml"):
+                self.resolved_type = PlaylistType.TRAKTOR
+            elif name.endswith(".txt"):
+                self.resolved_type = PlaylistType.REKORDBOX
+            elif not name.endswith(".csv"):
+                raise UnknownFormatError(self.path)
+            # .csv → resolved_type stays None until first access
 
-    def _determine_type(self):
-        if self.file_path.endswith(".nml"):
-            if self.verbose:  # pragma: no cover
-                print("Looking for nml")
-            self._parser = traktor_parser
-            self.playlist_type = PlaylistType.TRAKTOR
-        elif self.file_path.endswith(".txt"):
-            if self.verbose:  # pragma: no cover
-                print("Looking for txt")
-            self._parser = rekordbox_parser
-            self.playlist_type = PlaylistType.REKORDBOX
-        elif self.file_path.endswith(".csv"):
-            if self.verbose:  # pragma: no cover
-                print("Looking for csv. filepath: ", self.file_path)
+    @property
+    def playlist_type(self) -> PlaylistType:
+        """Format of the playlist, detected lazily for CSV files."""
+        if self.resolved_type is None:
+            self.resolved_type = sniff_csv(self.path)
+        return self.resolved_type
 
-            with open(self.file_path) as file:
-                reader = DictReader(file)
-                line = reader.__next__()
-                if self.verbose:  # pragma: no cover
-                    print("First line: ", line)
+    @property
+    def track_count(self) -> int:
+        """Total number of tracks (materialises if not yet accessed)."""
+        return len(self.materialise())
 
-                if "\ufeffsep=" in line:
-                    self._parser = virtualdj_parser
-                    self.playlist_type = PlaylistType.VIRTUALDJ
+    @property
+    def total_duration(self) -> int:
+        """Sum of all track durations in seconds (materialises if not yet accessed)."""
+        return sum(track.duration for track in self.materialise())
 
-                if "#" in line:
-                    self._parser = engine_parser
-                    self.playlist_type = PlaylistType.ENGINE
+    def __iter__(self) -> Iterator[Track]:
+        """Yield tracks one by one; always a fresh streaming pass."""
+        yield from self.stream()
 
-                if "name" in line:
-                    self._parser = serato_parser
-                    self.playlist_type = PlaylistType.SERATO
+    def to_list(self) -> list[Track]:
+        """Materialise all tracks into a list.
 
-        if self.verbose:  # pragma: no cover
-            print(f"Initialized {self.playlist_type} playlist.")
+        The result is cached; subsequent calls return the same list without
+        re-reading the file.
+        """
+        return self.materialise()
 
-        if self.playlist_type == PlaylistType.UNKNOWN:
-            raise Exception(f"Couldn't determine playlist type from '{self.file_path}'")
+    def materialise(self) -> list[Track]:
+        """Return the cached track list, populating it on first call."""
+        if self.cached_tracks is None:
+            self.cached_tracks = list(self.stream())
+        return self.cached_tracks
 
-    def parse(self):
-        if self.verbose:  # pragma: no cover
-            print("Parsing...")
-        self.tracks = self._parser(
-            self.file_path,
-            require_title=self.require_title,  # type: ignore
-            require_duration=self.require_duration,  # type: ignore
-            require_bpm=self.require_bpm,  # type: ignore
-            require_year=self.require_year,  # type: ignore
-            require_fp=self.require_fp,  # type: ignore
-            default_artist=self.default_artist,  # type: ignore
-            verbose=self.verbose,  # type: ignore
-        )  # type: ignore
-        self.is_parsed = True
-        if self.verbose:  # pragma: no cover
-            print(f"Found {len(self.tracks)} tracks.")
-
-    def get_tracks(self):
-        if not self.is_parsed:
-            self.parse()
-        return self.tracks
+    def stream(self) -> Iterator[Track]:
+        """Route to the correct per-format streaming generator."""
+        kw: dict[str, object] = {
+            "require": self.require,
+            "default_artist": self.default_artist,
+        }
+        detected_type = self.playlist_type
+        unsupported = self.require - SUPPORTED_FIELDS_BY_TYPE.get(detected_type, frozenset())
+        if unsupported:
+            raise MissingFieldError(sorted(unsupported)[0])
+        path_str = str(self.path)
+        if detected_type == PlaylistType.ENGINE:
+            yield from engine_iter(path_str, **kw)  # type: ignore[arg-type]
+        elif detected_type == PlaylistType.REKORDBOX:
+            yield from rekordbox_iter(path_str, **kw)  # type: ignore[arg-type]
+        elif detected_type == PlaylistType.SERATO:
+            yield from serato_iter(path_str, **kw)  # type: ignore[arg-type]
+        elif detected_type == PlaylistType.TRAKTOR:
+            yield from traktor_iter(path_str, **kw)  # type: ignore[arg-type]
+        elif detected_type == PlaylistType.VIRTUALDJ:
+            yield from virtualdj_iter(path_str, **kw)  # type: ignore[arg-type]
+        else:
+            raise UnknownFormatError(self.path)
 
 
-__version__ = "3.0.0-beta.10"
+__all__ = [
+    "FieldName",
+    "MalformedPlaylistError",
+    "MissingFieldError",
+    "PlaylistParser",
+    "PlaylistParserError",
+    "PlaylistType",
+    "Track",
+    "UnknownFormatError",
+]
+
+__version__ = "4.0.0"

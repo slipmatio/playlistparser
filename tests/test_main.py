@@ -1,83 +1,342 @@
-from os.path import join
+import logging
 from pathlib import Path
 
 import pytest
 
-from playlistparser import PlaylistParser, PlaylistType
+import playlistparser as playlistparser_module
+import playlistparser.parsers.engine as engine_parser
+from playlistparser import (
+    MissingFieldError,
+    PlaylistParser,
+    PlaylistType,
+    UnknownFormatError,
+)
+from playlistparser.parsers.traktor import iter_tracks as original_traktor_iter
 from playlistparser.utils import time_str_to_seconds
 
-ROOT_DIR = Path(__file__).resolve().parent.parent
+DATA = Path(__file__).resolve().parent.parent / "data"
 
-BROKEN_FILE = join(ROOT_DIR, "data/brokentestfile.dat")
-FIVE_ARTISTS = join(ROOT_DIR, "data/TestList5Artists.txt")
-HUNDRED_TRACKS = join(ROOT_DIR, "data/TestList100tracks.txt")
+ENGINE_FILE = DATA / "enginedj-v21.csv"
+REKORDBOX_FILE = DATA / "rekordbox-v6.txt"
+SERATO_FILE = DATA / "serato-v25.csv"
+TRAKTOR_FILE = DATA / "traktor-v35.nml"
+VIRTUALDJ_FILE = DATA / "virtualdj-v2021.csv"
+BROKEN_FILE = DATA / "brokentestfile.dat"
+BROKEN_SERATO = DATA / "broken-serato-v25.csv"
 
-ENGINE_FILE = join(ROOT_DIR, "data/enginedj-v21.csv")
-REKORDBOX_FILE = join(ROOT_DIR, "data/rekordbox-v6.txt")
-SERATO_FILE = join(ROOT_DIR, "data/serato-v25.csv")
-TRAKTOR_FILE = join(ROOT_DIR, "data/traktor-v35.nml")
-VIRTUALDJ_FILE = join(ROOT_DIR, "data/virtualdj-v2021.csv")
+ALL_FORMAT_FILES = [
+    (ENGINE_FILE, PlaylistType.ENGINE),
+    (REKORDBOX_FILE, PlaylistType.REKORDBOX),
+    (SERATO_FILE, PlaylistType.SERATO),
+    (TRAKTOR_FILE, PlaylistType.TRAKTOR),
+    (VIRTUALDJ_FILE, PlaylistType.VIRTUALDJ),
+]
 
-verbose = False
-
-
-def test_broken_file():
-    with pytest.raises(Exception) as exc_info:
-        PlaylistParser(BROKEN_FILE, verbose=verbose)
-    assert str(exc_info.value).startswith("Couldn't determine playlist type")
-
-
-def test_utils():
-    assert time_str_to_seconds("00:00:00") == 0
-    assert time_str_to_seconds("00:00:10") == 10
-    assert time_str_to_seconds("00:01:00") == 60
-    assert time_str_to_seconds("00:10:00") == 600
-    assert time_str_to_seconds("01:00:00") == 3600
-    assert time_str_to_seconds("foo") == 0
+EXPECTED_TITLES = [
+    "Tähtikaaren Taa (2008 Remix)",
+    "Taivas Lyö Tulta",
+    "Orkidea - Luminosity Beach Festival 06-07-2014",
+    "1998 (Paul Van Dyk Remix)",
+]
 
 
-def test_num_artists():
-    parser = PlaylistParser(FIVE_ARTISTS, verbose=verbose)
-    parser.parse()
-    tracks = parser.get_tracks()
-    assert len(tracks) == 100
-    artists = set()
-    for track in tracks:
-        artists.add(track.artist)
-    assert len(artists) == 5
-
-
-def test_num_tracks():
-    parser = PlaylistParser(HUNDRED_TRACKS, verbose=verbose)
-    tracks = parser.get_tracks()
-    assert len(tracks) == 100
-    artists = set()
-    for track in tracks:
-        artists.add(track.artist)
-    assert len(artists) == 81
-
-
-def test_playlist_type():
-    parser = PlaylistParser(HUNDRED_TRACKS, verbose=verbose)
-    assert parser.playlist_type == PlaylistType.REKORDBOX
-    assert int(parser.playlist_type) == 2
+# utils
 
 
 @pytest.mark.parametrize(
-    "file_name",
+    ("raw", "seconds"),
     [
-        ENGINE_FILE,
-        REKORDBOX_FILE,
-        SERATO_FILE,
-        TRAKTOR_FILE,
-        VIRTUALDJ_FILE,
+        ("00:00", 0),
+        ("04:03", 243),
+        ("160:36", 9636),
+        ("00:00:10", 10),
+        ("01:02:03", 3723),
+        ("", 0),
+        ("foo", 0),
     ],
 )
-def test_default_artist(file_name):
-    parser = PlaylistParser(file_name, verbose=verbose)
-    tracks = parser.get_tracks()
-    assert tracks[2].artist == "Unknown Artist"
+def test_time_str_to_seconds(raw, seconds):
+    assert time_str_to_seconds(raw) == seconds
 
-    parser = PlaylistParser(file_name, default_artist="Default", verbose=verbose)
-    tracks = parser.get_tracks()
-    assert tracks[2].artist == "Default"
+
+# PlaylistParser
+
+
+@pytest.mark.parametrize(("file_path", "expected_type"), ALL_FORMAT_FILES)
+def test_detect_format(file_path, expected_type):
+    assert PlaylistParser(file_path).playlist_type == expected_type
+
+
+def test_detect_format_unknown():
+    with pytest.raises(UnknownFormatError) as exc_info:
+        PlaylistParser(BROKEN_FILE)
+    msg = str(exc_info.value)
+    assert ".nml" in msg
+    assert ".txt" in msg
+    assert ".csv" in msg
+    assert "as_type=" in msg
+
+
+def test_detect_format_accepts_pathlib():
+    assert PlaylistParser(Path(TRAKTOR_FILE)).playlist_type == PlaylistType.TRAKTOR
+
+
+def test_detect_format_accepts_str():
+    assert PlaylistParser(str(REKORDBOX_FILE)).playlist_type == PlaylistType.REKORDBOX
+
+
+def test_parse_pathlib():
+    tracks = PlaylistParser(Path(REKORDBOX_FILE)).to_list()
+    assert len(tracks) == 4
+
+
+def test_parse_str():
+    tracks = PlaylistParser(str(TRAKTOR_FILE)).to_list()
+    assert len(tracks) == 4
+
+
+def test_parse_default_artist():
+    tracks = PlaylistParser(ENGINE_FILE, default_artist="Unknown Artist").to_list()
+    third = tracks[2]
+    assert third.artist == "Unknown Artist"
+
+    tracks2 = PlaylistParser(ENGINE_FILE, default_artist="Custom").to_list()
+    assert tracks2[2].artist == "Custom"
+
+
+def test_parse_format_override_uses_requested_parser_despite_extension(tmp_path):
+    playlist = tmp_path / "engine-export.txt"
+    playlist.write_bytes(ENGINE_FILE.read_bytes())
+
+    tracks = PlaylistParser(playlist, as_type=PlaylistType.ENGINE).to_list()
+
+    assert [track.title for track in tracks] == EXPECTED_TITLES
+
+
+def test_iter_tracks_streams_without_validating_unconsumed_rows(tmp_path):
+    playlist = tmp_path / "streaming.csv"
+    playlist.write_text(
+        "#,Title,Artist,Length,BPM,Year,File name\n"
+        '1,"First Track","Artist",60,120,2024,"/music/first.mp3"\n'
+        '2,"","Artist",60,120,2024,"/music/broken.mp3"\n',
+        encoding="utf-8",
+    )
+
+    tracks = iter(PlaylistParser(playlist, require=["title"]))
+
+    assert next(tracks).title == "First Track"
+    with pytest.raises(MissingFieldError):
+        next(tracks)
+
+
+def test_playlist_accepts_str():
+    parser = PlaylistParser(str(REKORDBOX_FILE))
+    assert len(parser.to_list()) == 4
+
+
+def test_playlist_accepts_pathlib():
+    parser = PlaylistParser(Path(TRAKTOR_FILE))
+    assert len(parser.to_list()) == 4
+
+
+def test_playlist_path_property():
+    parser = PlaylistParser(REKORDBOX_FILE)
+    assert isinstance(parser.path, Path)
+    assert parser.path == Path(REKORDBOX_FILE)
+
+
+def test_playlist_format_property():
+    parser = PlaylistParser(TRAKTOR_FILE)
+    assert parser.playlist_type == PlaylistType.TRAKTOR
+
+
+def test_playlist_iter():
+    parser = PlaylistParser(ENGINE_FILE)
+    tracks = list(parser)
+    assert len(tracks) == 4
+
+
+def test_playlist_track_count():
+    parser = PlaylistParser(SERATO_FILE)
+    assert parser.track_count == 4
+
+
+def test_playlist_tracks_lazy():
+    parser = PlaylistParser(ENGINE_FILE)
+    # track_count triggers materialisation; verify it returns a positive int
+    count = parser.track_count
+    assert count > 0
+    # second to_list() returns the same cached list
+    first = parser.to_list()
+    second = parser.to_list()
+    assert first is second
+
+
+def test_playlist_format_override_uses_requested_parser_despite_extension(tmp_path):
+    playlist = tmp_path / "rekordbox-export.csv"
+    playlist.write_bytes(REKORDBOX_FILE.read_bytes())
+
+    parser = PlaylistParser(playlist, as_type=PlaylistType.REKORDBOX)
+
+    assert [track.title for track in parser.to_list()] == EXPECTED_TITLES
+
+
+@pytest.mark.parametrize(("file_path", "expected_type"), ALL_FORMAT_FILES)
+def test_playlist_detects_format(file_path, expected_type):
+    parser = PlaylistParser(file_path)
+    assert parser.playlist_type == expected_type
+
+
+def test_playlist_unknown_raises():
+    with pytest.raises(UnknownFormatError):
+        PlaylistParser(BROKEN_FILE)
+
+
+def test_broken_csv_raises_on_access():
+    parser = PlaylistParser(BROKEN_SERATO)
+    with pytest.raises(UnknownFormatError):
+        _ = parser.to_list()
+
+
+def test_unknown_error_message_lists_extensions():
+    with pytest.raises(UnknownFormatError) as exc_info:
+        PlaylistParser(BROKEN_FILE)
+    msg = str(exc_info.value)
+    assert ".nml" in msg
+    assert ".csv" in msg
+    assert "as_type=" in msg
+
+
+def test_logger_receives_records(caplog, monkeypatch):
+    """Skipped-row warnings are emitted via the parser's module logger."""
+
+    def broken_track(**kwargs):
+        del kwargs
+        raise ValueError("forced track failure")
+
+    monkeypatch.setattr(engine_parser, "Track", broken_track)
+    with caplog.at_level(logging.DEBUG, logger=engine_parser.__name__):
+        loaded = PlaylistParser(ENGINE_FILE).to_list()
+    assert loaded == []
+    assert any(
+        record.name == engine_parser.__name__ and "forced track failure" in record.message for record in caplog.records
+    )
+
+
+# Cross-format consistency
+
+
+def test_cross_format_track_data():
+    """All formats yield the same title, artist, year for matching tracks."""
+    rb_tracks = PlaylistParser(REKORDBOX_FILE).to_list()
+    en_tracks = PlaylistParser(ENGINE_FILE).to_list()
+    se_tracks = PlaylistParser(SERATO_FILE).to_list()
+    tr_tracks = PlaylistParser(TRAKTOR_FILE).to_list()
+    vj_tracks = PlaylistParser(VIRTUALDJ_FILE).to_list()
+
+    assert len(rb_tracks) == len(en_tracks) == len(se_tracks) == len(tr_tracks) == len(vj_tracks)
+
+    for i, rekordbox_track in enumerate(rb_tracks):
+        engine_track = en_tracks[i]
+        serato_track = se_tracks[i]
+        traktor_track = tr_tracks[i]
+        virtualdj_track = vj_tracks[i]
+        assert (
+            rekordbox_track.artist
+            == engine_track.artist
+            == serato_track.artist
+            == traktor_track.artist
+            == virtualdj_track.artist
+        )
+        assert (
+            rekordbox_track.title
+            == engine_track.title
+            == serato_track.title
+            == traktor_track.title
+            == virtualdj_track.title
+        )
+        assert (
+            rekordbox_track.year == engine_track.year == serato_track.year == traktor_track.year == virtualdj_track.year
+        )
+
+
+def test_num_tracks_large_file():
+    tracks = PlaylistParser(DATA / "TestList100tracks.txt").to_list()
+    assert len(tracks) == 100
+
+
+def test_five_artists():
+    tracks = PlaylistParser(DATA / "TestList5Artists.txt").to_list()
+    artists = {track.artist for track in tracks}
+    assert len(artists) == 5
+
+
+# New PlaylistParser contract tests
+
+
+def test_iter_makes_fresh_streaming_pass(monkeypatch):
+    """Each for-loop over a PlaylistParser re-reads the file, never using the cache."""
+    calls: list[int] = []
+
+    def counting_iter(*args, **kwargs):
+        calls.append(1)
+        yield from original_traktor_iter(*args, **kwargs)
+
+    monkeypatch.setattr(playlistparser_module, "traktor_iter", counting_iter)
+    parser = PlaylistParser(TRAKTOR_FILE)
+
+    first = list(parser)
+    second = list(parser)
+
+    assert first == second
+    assert len(calls) == 2  # iter_tracks called twice — fresh pass each time
+
+
+def test_to_list_uses_cache_on_second_call(monkeypatch):
+    """to_list() populates the cache; a second call returns the same list object."""
+    calls: list[int] = []
+
+    def counting_iter(*args, **kwargs):
+        calls.append(1)
+        yield from original_traktor_iter(*args, **kwargs)
+
+    monkeypatch.setattr(playlistparser_module, "traktor_iter", counting_iter)
+    parser = PlaylistParser(TRAKTOR_FILE)
+
+    first = parser.to_list()
+    second = parser.to_list()
+
+    assert first is second
+    assert len(calls) == 1  # iter_tracks called only once
+
+
+def test_track_count_and_total_duration_share_to_list_cache(monkeypatch):
+    """track_count and total_duration reuse the cache populated by to_list()."""
+    calls: list[int] = []
+
+    def counting_iter(*args, **kwargs):
+        calls.append(1)
+        yield from original_traktor_iter(*args, **kwargs)
+
+    monkeypatch.setattr(playlistparser_module, "traktor_iter", counting_iter)
+    parser = PlaylistParser(TRAKTOR_FILE)
+
+    tracks = parser.to_list()
+    count = parser.track_count
+    dur = parser.total_duration
+
+    assert count == len(tracks)
+    assert dur == sum(track.duration for track in tracks)
+    assert len(calls) == 1  # only one file parse
+
+
+def test_format_override_nonstandard_extension(tmp_path):
+    """format= bypasses extension detection, allowing e.g. .dat to parse as ENGINE."""
+    dat_file = tmp_path / "export.dat"
+    dat_file.write_bytes(ENGINE_FILE.read_bytes())
+
+    parser = PlaylistParser(dat_file, as_type=PlaylistType.ENGINE)
+    tracks = parser.to_list()
+
+    assert len(tracks) == 4
+    assert [track.title for track in tracks] == EXPECTED_TITLES

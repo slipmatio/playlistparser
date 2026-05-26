@@ -35,7 +35,6 @@ def iter_tracks(
     *,
     require: frozenset[FieldName] = frozenset(),
     default_artist: str = "Unknown Artist",
-    logger: logging.Logger | None = None,
 ) -> Iterator[Track]:
     """Rekordbox supports: title, artist, year, duration, bpm, file_path.
 
@@ -45,7 +44,6 @@ def iter_tracks(
 
     Yields one :class:`~playlistparser.track.Track` per playlist row.
     """
-    del logger  # Rekordbox currently raises malformed row errors directly.
     with Path(file_path).open("rb") as raw:
         text = io.TextIOWrapper(raw, encoding="utf-16", errors="replace", newline="")
         reader = csv.reader(text, delimiter="\t")

@@ -19,7 +19,6 @@ def iter_tracks(  # noqa: C901, PLR0912 -- many branches needed for optional NML
     *,
     require: frozenset[FieldName] = frozenset(),
     default_artist: str = "Unknown Artist",
-    logger: logging.Logger | None = None,
 ) -> Iterator[Track]:
     """Traktor NML supports: title, artist, year, duration, bpm.
 
@@ -28,7 +27,6 @@ def iter_tracks(  # noqa: C901, PLR0912 -- many branches needed for optional NML
 
     Yields one :class:`~playlistparser.track.Track` per ENTRY.
     """
-    log = logger or logging.getLogger(__name__)
     context = etree.iterparse(file_path, events=("end",), tag="ENTRY")
 
     for lineno, (event, elem) in enumerate(context, start=1):
@@ -85,6 +83,6 @@ def iter_tracks(  # noqa: C901, PLR0912 -- many branches needed for optional NML
         except MissingFieldError:
             raise
         except (AttributeError, ValueError, TypeError) as exc:
-            log.debug("Skipping entry %d: %s", lineno, exc)
+            logger.debug("Skipping entry %d: %s", lineno, exc)
         finally:
             elem.clear()

@@ -33,7 +33,6 @@ def iter_tracks(
     *,
     require: frozenset[FieldName] = frozenset(),
     default_artist: str = "Unknown Artist",
-    logger: logging.Logger | None = None,
 ) -> Iterator[Track]:
     """VirtualDJ supports: title, artist, year, duration, bpm.
 
@@ -42,7 +41,6 @@ def iter_tracks(
 
     Yields one :class:`~playlistparser.track.Track` per playlist row.
     """
-    log = logger or logging.getLogger(__name__)
     # utf-8-sig strips the BOM so row 0 reads as plain 'sep=,'
     with Path(file_path).open(encoding="utf-8-sig", newline="") as f:
         reader = csv.reader(f)
@@ -87,4 +85,4 @@ def iter_tracks(
             except MissingFieldError:
                 raise
             except (csv.Error, IndexError, ValueError, TypeError) as exc:
-                log.debug("Skipping line %d: %s", lineno, exc)
+                logger.debug("Skipping line %d: %s", lineno, exc)

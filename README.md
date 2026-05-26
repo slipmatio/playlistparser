@@ -12,57 +12,94 @@ Free hosted version of this tool:
 
 ## Usage
 
-```python
-from playlistparser import PlaylistParser
-```
-
-### Stream tracks (default)
+One end-to-end example covering format detection, streaming, required fields,
+aggregates, per-track data and every exception you need to handle:
 
 ```python
-for track in PlaylistParser("set.nml"):
-    print(track)          # "Artist - Title"
-    print(track.bpm, track.duration, track.year)
-```
+import logging
 
-### Materialise into a list
+from playlistparser import (
+    MalformedPlaylistError,
+    MissingFieldError,
+    PlaylistParser,
+    PlaylistParserError,
+    PlaylistType,
+    UnknownFormatError,
+)
 
-```python
-tracks = PlaylistParser("set.nml").to_list()
-```
-
-### Format detection and aggregates
-
-```python
-pl = PlaylistParser("history.csv")
-print(pl.format)          # PlaylistType.SERATO / ENGINE / VIRTUALDJ (sniffed lazily)
-print(pl.track_count)     # materialises once, cached thereafter
-print(pl.total_duration)  # sum of track durations in seconds
-```
-
-### Enforce required fields
-
-Raise `MissingFieldError` as soon as a row is missing one of the listed fields:
-
-```python
-from playlistparser import PlaylistParser, MissingFieldError
+logging.basicConfig(level=logging.INFO)
 
 try:
-    for track in PlaylistParser("set.nml", require=["title", "bpm", "year"]):
-        ...
+    # Construct a parser. All keyword arguments are optional.
+    #
+    #   require        — fail fast if any listed field is missing on a row.
+    #                    If the format itself can't expose the field (e.g. Serato
+    #                    has no bpm), MissingFieldError is raised immediately,
+    #                    before any I/O.
+    #   as_type        — override format detection (use for unusual file
+    #                    extensions); otherwise the format is detected from the
+    #                    extension, and for .csv from the header row.
+    #   default_artist — substituted when a row has no artist field.
+    #
+    # Recoverable per-row warnings are emitted via stdlib `logging` under the
+    # `playlistparser.parsers.*` logger names — configure logging at the root
+    # (or route through structlog with `structlog.stdlib.LoggerFactory()`).
+    pl = PlaylistParser(
+        "history.csv",
+        require=["title", "artist"],
+        default_artist="Unknown Artist",
+        # as_type=PlaylistType.ENGINE,  # uncomment to bypass detection
+    )
+
+    # Detected format (PlaylistType enum: ENGINE, REKORDBOX, SERATO,
+    # TRAKTOR, VIRTUALDJ). For .csv this triggers a one-time header sniff.
+    print(f"Format: {pl.format.name}")
+
+    # Stream tracks. Iteration is lazy — each pass re-reads the file unless
+    # you materialise with .to_list() (cached for the lifetime of the parser).
+    for track in pl:
+        # str(track) → "Artist - Title"
+        print(track)
+
+        # Track is a frozen dataclass with these fields (all always present;
+        # unsupported / missing values are 0 or ""):
+        #   title: str, artist: str, file_path: str
+        #   duration: int (seconds), year: int, bpm: int
+        print(track.bpm, track.year, track.duration_str())  # e.g. "128 2024 6:42"
+
+        # Serialise for JSON / DB. no_meta=True keeps only title + artist.
+        payload = track.as_dict()
+
+    # Aggregates materialise the full list once and cache it.
+    print(f"{pl.track_count} tracks, {pl.total_duration}s total")
+
+    # Explicit materialisation if you need the list directly.
+    tracks = pl.to_list()
+
+except UnknownFormatError as e:
+    # Extension not recognised, or CSV header didn't match any known format.
+    # Pass as_type=PlaylistType.X to override.
+    print(f"Unsupported file: {e}")
+
 except MissingFieldError as e:
-    print(f"Bad row: {e}")
-```
+    # A required field was missing — either unsupported by the format
+    # (raised before parsing) or absent on a specific row.
+    # e.field, e.line, e.track_title are available for diagnostics.
+    print(f"Missing '{e.field}' on line {e.line}: {e.track_title!r}")
 
-If the format itself doesn't expose a required field (e.g. Serato has no `bpm`),
-`MissingFieldError` is raised immediately — no parsing happens.
+except MalformedPlaylistError as e:
+    # Structural problem with the file (bad XML, truncated row, etc).
+    # e.path and e.line locate the problem.
+    print(f"Corrupt playlist: {e}")
 
-### Override format detection
+except PlaylistParserError as e:
+    # Base class — catch this if you don't care which of the above fired.
+    print(f"Could not parse playlist: {e}")
 
-```python
-from playlistparser import PlaylistParser, PlaylistType
-
-for track in PlaylistParser("export.dat", as_type=PlaylistType.ENGINE):
-    ...
+except FileNotFoundError:
+    # The library does not check existence in the constructor; the file is
+    # opened on the first iteration / aggregate access.
+    print("Playlist file does not exist")
 ```
 
 ### Supported formats and fields

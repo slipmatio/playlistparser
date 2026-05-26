@@ -1,7 +1,6 @@
 """playlistparser — public API."""
 
 import csv
-import logging
 from enum import IntEnum
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
@@ -99,11 +98,9 @@ class PlaylistParser:
         *,
         require: Iterable[FieldName] = (),
         as_type: PlaylistType | None = None,
-        logger: logging.Logger | None = None,
         default_artist: str = "Unknown Artist",
     ) -> None:
         self.path = Path(file_path)
-        self.logger = logger or logging.getLogger(__name__)
         self.default_artist = default_artist
         self.require: frozenset[FieldName] = frozenset(require)  # type: ignore[arg-type]
         self.resolved_type: PlaylistType | None = as_type
@@ -160,7 +157,6 @@ class PlaylistParser:
         kw: dict[str, object] = {
             "require": self.require,
             "default_artist": self.default_artist,
-            "logger": self.logger,
         }
         pt = self.format
         unsupported = self.require - SUPPORTED_FIELDS_BY_TYPE.get(pt, frozenset())

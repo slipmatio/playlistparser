@@ -208,19 +208,19 @@ def test_unknown_error_message_lists_extensions():
 
 
 def test_logger_receives_records(caplog, monkeypatch):
-    """A caller-supplied logger= should receive debug records for skipped rows."""
+    """Skipped-row warnings are emitted via the parser's module logger."""
 
     def broken_track(**kwargs):
         del kwargs
         raise ValueError("forced track failure")
 
     monkeypatch.setattr(engine_parser, "Track", broken_track)
-    custom_logger = logging.getLogger("test_custom")
-    with caplog.at_level(logging.DEBUG, logger="test_custom"):
-        p = PlaylistParser(ENGINE_FILE, logger=custom_logger)
-        loaded = p.to_list()
+    with caplog.at_level(logging.DEBUG, logger=engine_parser.__name__):
+        loaded = PlaylistParser(ENGINE_FILE).to_list()
     assert loaded == []
-    assert any(record.name == "test_custom" and "forced track failure" in record.message for record in caplog.records)
+    assert any(
+        record.name == engine_parser.__name__ and "forced track failure" in record.message for record in caplog.records
+    )
 
 
 # Cross-format consistency

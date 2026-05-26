@@ -33,7 +33,6 @@ def iter_tracks(
     *,
     require: frozenset[FieldName] = frozenset(),
     default_artist: str = "Unknown Artist",
-    logger: logging.Logger | None = None,
 ) -> Iterator[Track]:
     """Serato supports: title, artist, year.
 
@@ -41,7 +40,6 @@ def iter_tracks(
 
     Yields one :class:`~playlistparser.track.Track` per playlist row.
     """
-    log = logger or logging.getLogger(__name__)
     with Path(file_path).open(encoding="utf-8", newline="") as f:
         reader = csv.reader(f)
         try:
@@ -75,4 +73,4 @@ def iter_tracks(
             except MissingFieldError:
                 raise
             except (csv.Error, IndexError, ValueError, TypeError) as exc:
-                log.debug("Skipping line %d: %s", lineno, exc)
+                logger.debug("Skipping line %d: %s", lineno, exc)

@@ -17,6 +17,8 @@ logger = logging.getLogger(__name__)
 
 TITLE_COL = "Track Title"
 ARTIST_COL = "Artist"
+ALBUM_COL = "Album"
+KEY_COL = "Key"
 TIME_COL = "Time"
 BPM_COL = "BPM"
 YEAR_COL = "Year"
@@ -29,7 +31,7 @@ def iter_tracks(
     require: frozenset[FieldName] = frozenset(),
     default_artist: str = "Unknown Artist",
 ) -> Iterator[Track]:
-    """Rekordbox supports: title, artist, year, duration, bpm, file_path.
+    """Rekordbox supports: title, artist, album, key, year, duration, bpm, file_path.
 
     The export file is UTF-16 tab-separated.  We wrap the binary stream in
     :class:`io.TextIOWrapper` so the CSV reader processes it line-by-line
@@ -71,9 +73,9 @@ def iter_tracks(
                 bpm = 0
             else:
                 try:
-                    bpm = int(float(raw_bpm))
+                    bpm = float(raw_bpm)
                 except ValueError:
-                    bpm = 0
+                    bpm = 0.0
 
             year = csv_field(row, columns, YEAR_COL)
             if not year and "year" in require:
@@ -85,9 +87,19 @@ def iter_tracks(
 
             artist = csv_field(row, columns, ARTIST_COL) or default_artist
 
+            album = csv_field(row, columns, ALBUM_COL)
+            if not album and "album" in require:
+                raise MissingFieldError("album", line=lineno, track_title=title)
+
+            key = csv_field(row, columns, KEY_COL)
+            if not key and "key" in require:
+                raise MissingFieldError("key", line=lineno, track_title=title)
+
             yield Track(
                 title=title,
                 artist=artist,
+                album=album,
+                key=key,
                 year=year,
                 duration=playtime,
                 bpm=bpm,

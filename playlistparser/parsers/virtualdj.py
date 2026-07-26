@@ -18,6 +18,7 @@ TITLE_COL = "Title"
 ARTIST_COL = "Artist"
 LENGTH_COL = "Length"
 BPM_COL = "Bpm"
+KEY_COL = "Key"
 YEAR_COL = "Year"
 
 
@@ -27,7 +28,7 @@ def iter_tracks(
     require: frozenset[FieldName] = frozenset(),
     default_artist: str = "Unknown Artist",
 ) -> Iterator[Track]:
-    """VirtualDJ supports: title, artist, year, duration, bpm.
+    """VirtualDJ supports: title, artist, key, year, duration, bpm.
 
     The first row is the BOM+``sep=,`` directive; the second row is the real
     header.  We skip row 1 and build the index map from row 2.
@@ -64,17 +65,21 @@ def iter_tracks(
 
                 raw_bpm = csv_field(row, columns, BPM_COL)
                 try:
-                    bpm = int(float(raw_bpm)) if raw_bpm else 0
+                    bpm = float(raw_bpm) if raw_bpm else 0.0
                 except ValueError, AttributeError:
-                    bpm = 0
+                    bpm = 0.0
                 if bpm == 0 and "bpm" in require:
                     raise MissingFieldError("bpm", line=lineno, track_title=title or None)
+
+                key = csv_field(row, columns, KEY_COL)
+                if not key and "key" in require:
+                    raise MissingFieldError("key", line=lineno, track_title=title or None)
 
                 year = csv_field(row, columns, YEAR_COL)
                 if not year and "year" in require:
                     raise MissingFieldError("year", line=lineno, track_title=title or None)
 
-                yield Track(title=title, artist=artist, year=year, duration=playtime, bpm=bpm)
+                yield Track(title=title, artist=artist, key=key, year=year, duration=playtime, bpm=bpm)
             except MissingFieldError:
                 raise
             except (csv.Error, IndexError, ValueError, TypeError) as exc:

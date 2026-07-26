@@ -148,6 +148,34 @@ def test_traktor_basic():
     assert tracks[2].artist == "Unknown Artist"
 
 
+def test_traktor_extracts_normalized_metadata(tmp_path):
+    playlist = tmp_path / "metadata.nml"
+    playlist.write_text(
+        """<NML><COLLECTION><ENTRY TITLE="Metadata Track" ARTIST="DJ" AUDIO_ID=" vendor-123 ">
+        <LOCATION DIR="/:Music/:Set/:" FILE="track.mp3" />
+        <ALBUM TITLE=" Café " />
+        <INFO KEY=" 8A " PLAYTIME="61" RELEASE_DATE="2024/1/1" />
+        <TEMPO BPM="128.26" />
+        </ENTRY></COLLECTION></NML>""",
+        encoding="utf-8",
+    )
+
+    [track] = PlaylistParser(playlist).to_list()
+
+    assert track.as_dict() == {
+        "title": "Metadata Track",
+        "artist": "DJ",
+        "album": "Café",
+        "key": "8A",
+        "duration": 61,
+        "year": 2024,
+        "bpm": 128.3,
+        "file_path": "/Music/Set/track.mp3",
+        "vendor_id": "vendor-123",
+        "duration_str": "1:01",
+    }
+
+
 def test_traktor_missing_playtime_defaults_to_zero():
     tracks = PlaylistParser(TRAKTOR_MISSING_PLAYTIME).to_list()
     assert len(tracks) == 2
@@ -161,13 +189,17 @@ def test_traktor_require_duration_raises_when_playtime_missing():
     assert exc_info.value.field == "duration"
 
 
+def test_traktor_require_file_path():
+    tracks = PlaylistParser(TRAKTOR_FILE, require=["file_path"]).to_list()
+    assert all(track.file_path for track in tracks)
+
+
 @pytest.mark.parametrize(
     ("file_path", "required_field"),
     [
         (SERATO_FILE, "duration"),
         (SERATO_FILE, "bpm"),
         (SERATO_FILE, "file_path"),
-        (TRAKTOR_FILE, "file_path"),
         (VIRTUALDJ_FILE, "file_path"),
     ],
 )

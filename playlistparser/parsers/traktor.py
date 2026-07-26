@@ -14,13 +14,13 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def iter_tracks(  # noqa: C901, PLR0912 -- many branches needed for optional NML fields
+def iter_tracks(  # noqa: C901, PLR0912, PLR0915 -- optional NML fields require many branches and statements
     file_path: str,
     *,
     require: frozenset[FieldName] = frozenset(),
     default_artist: str = "Unknown Artist",
 ) -> Iterator[Track]:
-    """Traktor NML supports: title, artist, year, duration, bpm.
+    """Traktor NML supports: title, artist, album, key, year, duration, bpm, file_path, vendor_id.
 
     Only COLLECTION ENTRYs (those with a ``TITLE`` attribute) are processed;
     playlist-reference ENTRYs are silently skipped.
@@ -42,8 +42,14 @@ def iter_tracks(  # noqa: C901, PLR0912 -- many branches needed for optional NML
 
             track_artist = (elem.get("ARTIST") or "").strip() or default_artist
 
+            album_meta = elem.find("ALBUM")
+            album = (album_meta.get("TITLE") or "").strip() if album_meta is not None else ""
+            if not album and "album" in require:
+                raise MissingFieldError("album", line=lineno, track_title=track_title or None)
+
             playtime = 0
             year = ""
+            key = ""
             meta = elem.find("INFO")
             if meta is not None:
                 raw_playtime = (meta.get("PLAYTIME") or "").strip()
@@ -58,27 +64,50 @@ def iter_tracks(  # noqa: C901, PLR0912 -- many branches needed for optional NML
                 year = meta.get("RELEASE_DATE") or ""
                 if not year and "year" in require:
                     raise MissingFieldError("year", line=lineno, track_title=track_title or None)
+
+                key = (meta.get("KEY") or "").strip()
+                if not key and "key" in require:
+                    raise MissingFieldError("key", line=lineno, track_title=track_title or None)
             elif "duration" in require:
                 raise MissingFieldError("duration", line=lineno, track_title=track_title or None)
             elif "year" in require:
                 raise MissingFieldError("year", line=lineno, track_title=track_title or None)
+            elif "key" in require:
+                raise MissingFieldError("key", line=lineno, track_title=track_title or None)
 
-            bpm = 0
+            bpm = 0.0
             tempometa = elem.find("TEMPO")
             if tempometa is not None:
                 try:
-                    bpm = int(float(tempometa.get("BPM") or 0))
+                    bpm = float(tempometa.get("BPM") or 0.0)
                 except ValueError, TypeError:
-                    bpm = 0
+                    bpm = 0.0
             if bpm == 0 and "bpm" in require:
                 raise MissingFieldError("bpm", line=lineno, track_title=track_title or None)
+
+            location = elem.find("LOCATION")
+            track_path = ""
+            if location is not None:
+                directory = (location.get("DIR") or "").replace("/:", "/")
+                filename = location.get("FILE") or ""
+                track_path = f"{directory}{filename}"
+            if not track_path and "file_path" in require:
+                raise MissingFieldError("file_path", line=lineno, track_title=track_title or None)
+
+            vendor_id = (elem.get("AUDIO_ID") or "").strip()
+            if not vendor_id and "vendor_id" in require:
+                raise MissingFieldError("vendor_id", line=lineno, track_title=track_title or None)
 
             yield Track(
                 title=track_title,
                 artist=track_artist,
+                album=album,
+                key=key,
                 year=year,
                 duration=playtime,
                 bpm=bpm,
+                file_path=track_path,
+                vendor_id=vendor_id,
             )
         except MissingFieldError:
             raise

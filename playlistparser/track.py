@@ -37,27 +37,36 @@ class Track:
 
     title: str
     artist: str
+    album: str
+    key: str
     duration: int
     year: int
-    bpm: int
+    bpm: float
     file_path: str
+    vendor_id: str
 
-    def __init__(
+    def __init__(  # noqa: PLR0913 -- keyword-only arguments mirror the stable Track data model
         self,
         *,
         title: str,
         artist: str,
+        album: str = "",
+        key: str = "",
         duration: int = 0,
         year: str | int = 0,
-        bpm: int = 0,
+        bpm: float = 0.0,
         file_path: str = "",
+        vendor_id: str = "",
     ) -> None:
         object.__setattr__(self, "title", normalize_text(title))
         object.__setattr__(self, "artist", normalize_text(artist))
+        object.__setattr__(self, "album", normalize_text(album))
+        object.__setattr__(self, "key", normalize_text(key))
         object.__setattr__(self, "duration", duration)
         object.__setattr__(self, "year", clean_year(year))
-        object.__setattr__(self, "bpm", bpm)
+        object.__setattr__(self, "bpm", round(float(bpm), 1))
         object.__setattr__(self, "file_path", file_path)
+        object.__setattr__(self, "vendor_id", vendor_id.strip())
 
     def __str__(self) -> str:
         return f"{self.artist} - {self.title}"
@@ -76,12 +85,12 @@ class Track:
             string = string[1:]
         return string
 
-    def as_dict(self, *, no_meta: bool = False) -> dict[str, str | int]:
-        song: dict[str, str | int] = {"title": self.title, "artist": self.artist}
+    def as_dict(self, *, no_meta: bool = False) -> dict[str, str | int | float]:
+        song: dict[str, str | int | float] = {"title": self.title, "artist": self.artist}
         if no_meta:
             return song
         all_fields = dataclasses.asdict(self)
-        for key in ("duration", "year", "bpm", "file_path"):
+        for key in ("album", "key", "duration", "year", "bpm", "file_path", "vendor_id"):
             if all_fields[key]:
                 song[key] = all_fields[key]
         if self.duration:

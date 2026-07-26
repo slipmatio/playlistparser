@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.1.0 (2026-07-26)
+
+- Feat: add normalized album, musical key, and vendor identity fields.
+- Feat: expose Traktor locations and audio identities.
+- Fix: preserve decimal BPM values and round them once to one decimal place.
+
 ## 4.0.0 (2026-05-26)
 
 Performance upgrades, better typing, better error handling and general dx.
@@ -27,7 +33,8 @@ PlaylistParser(path)` is the default; `.to_list()` is the explicit eager escape 
 
 ```python
 # --- v3 ---
-pl = PlaylistParser("set.nml",
+pl = PlaylistParser(
+    "set.nml",
     require_title=True,
     require_duration=False,
     verbose=True,
@@ -37,8 +44,8 @@ tracks = pl.get_tracks()
 
 # --- v4 ---
 pl = PlaylistParser("set.nml", require=["title"])
-tracks = pl.to_list()             # or just: list(pl)
-for track in pl:                  # streaming, no materialisation
+tracks = pl.to_list()  # or just: list(pl)
+for track in pl:  # streaming, no materialisation
     print(track)
 ```
 

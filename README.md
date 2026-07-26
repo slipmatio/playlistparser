@@ -63,9 +63,10 @@ try:
 
         # Track is a frozen dataclass with these fields (all always present;
         # unsupported / missing values are 0 or ""):
-        #   title: str, artist: str, file_path: str
-        #   duration: int (seconds), year: int, bpm: int
-        print(track.bpm, track.year, track.duration_str())  # e.g. "128 2024 6:42"
+        #   title: str, artist: str, album: str, key: str
+        #   duration: int (seconds), year: int, bpm: float
+        #   file_path: str, vendor_id: str
+        print(track.bpm, track.year, track.duration_str())  # e.g. "128.0 2024 6:42"
 
         # Serialise for JSON / DB. no_meta=True keeps only title + artist.
         payload = track.as_dict()
@@ -104,13 +105,15 @@ except FileNotFoundError:
 
 ### Supported formats and fields
 
-| Format    | title | artist | duration | year | bpm | file_path |
-| --------- | :---: | :----: | :------: | :--: | :-: | :-------: |
-| Engine DJ |   x   |   x    |    x     |  x   |  x  |     x     |
-| Rekordbox |   x   |   x    |    x     |  x   |  x  |     x     |
-| Serato    |   x   |   x    |          |  x   |     |           |
-| Traktor   |   x   |   x    |    x     |  x   |  x  |           |
-| VirtualDJ |   x   |   x    |    x     |  x   |  x  |           |
+BPM is a float rounded to one decimal place. Traktor's `vendor_id` is its `ENTRY.AUDIO_ID`.
+
+| Format    | title | artist | album | key | duration | year | bpm | file_path | vendor_id |
+| --------- | :---: | :----: | :---: | :-: | :------: | :--: | :-: | :-------: | :-------: |
+| Engine DJ |   x   |   x    |   x   |     |    x     |  x   |  x  |     x     |           |
+| Rekordbox |   x   |   x    |   x   |  x  |    x     |  x   |  x  |     x     |           |
+| Serato    |   x   |   x    |       |     |          |  x   |     |           |           |
+| Traktor   |   x   |   x    |   x   |  x  |    x     |  x   |  x  |     x     |     x     |
+| VirtualDJ |   x   |   x    |       |  x  |    x     |  x   |  x  |           |           |
 
 ## Developing
 

@@ -20,7 +20,17 @@ if TYPE_CHECKING:
     import os
     from collections.abc import Iterable, Iterator
 
-FieldName = Literal["title", "artist", "duration", "year", "bpm", "file_path"]
+FieldName = Literal[
+    "title",
+    "artist",
+    "album",
+    "key",
+    "duration",
+    "year",
+    "bpm",
+    "file_path",
+    "vendor_id",
+]
 
 
 class PlaylistType(IntEnum):
@@ -33,11 +43,13 @@ class PlaylistType(IntEnum):
 
 
 SUPPORTED_FIELDS_BY_TYPE: dict[PlaylistType, frozenset[FieldName]] = {
-    PlaylistType.ENGINE: frozenset({"title", "artist", "duration", "year", "bpm", "file_path"}),
-    PlaylistType.REKORDBOX: frozenset({"title", "artist", "duration", "year", "bpm", "file_path"}),
+    PlaylistType.ENGINE: frozenset({"title", "artist", "album", "duration", "year", "bpm", "file_path"}),
+    PlaylistType.REKORDBOX: frozenset({"title", "artist", "album", "key", "duration", "year", "bpm", "file_path"}),
     PlaylistType.SERATO: frozenset({"title", "artist", "year"}),
-    PlaylistType.TRAKTOR: frozenset({"title", "artist", "duration", "year", "bpm"}),
-    PlaylistType.VIRTUALDJ: frozenset({"title", "artist", "duration", "year", "bpm"}),
+    PlaylistType.TRAKTOR: frozenset(
+        {"title", "artist", "album", "key", "duration", "year", "bpm", "file_path", "vendor_id"}
+    ),
+    PlaylistType.VIRTUALDJ: frozenset({"title", "artist", "key", "duration", "year", "bpm"}),
 }
 
 
@@ -159,7 +171,7 @@ class PlaylistParser:
         detected_type = self.playlist_type
         unsupported = self.require - SUPPORTED_FIELDS_BY_TYPE.get(detected_type, frozenset())
         if unsupported:
-            raise MissingFieldError(sorted(unsupported)[0])
+            raise MissingFieldError(min(unsupported))
         path_str = str(self.path)
         if detected_type == PlaylistType.ENGINE:
             yield from engine_iter(path_str, **kw)  # type: ignore[arg-type]
@@ -186,4 +198,4 @@ __all__ = [
     "UnknownFormatError",
 ]
 
-__version__ = "4.0.0"
+__version__ = "4.1.0"

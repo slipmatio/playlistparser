@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 TITLE_COL = "Title"
 ARTIST_COL = "Artist"
+ALBUM_COL = "Album"
 YEAR_COL = "Year"
 BPM_COL = "BPM"
 LENGTH_COL = "Length"
@@ -28,7 +29,7 @@ def iter_tracks(
     require: frozenset[FieldName] = frozenset(),
     default_artist: str = "Unknown Artist",
 ) -> Iterator[Track]:
-    """Engine DJ supports: title, artist, year, duration, bpm, file_path.
+    """Engine DJ supports: title, artist, album, year, duration, bpm, file_path.
 
     Yields one :class:`~playlistparser.track.Track` per playlist row.
     """
@@ -52,6 +53,10 @@ def iter_tracks(
 
                 artist = csv_field(row, columns, ARTIST_COL) or default_artist
 
+                album = csv_field(row, columns, ALBUM_COL)
+                if not album and "album" in require:
+                    raise MissingFieldError("album", line=lineno, track_title=title)
+
                 year = csv_field(row, columns, YEAR_COL)
                 if not year and "year" in require:
                     raise MissingFieldError("year", line=lineno, track_title=title)
@@ -60,9 +65,9 @@ def iter_tracks(
                 if not raw_bpm and "bpm" in require:
                     raise MissingFieldError("bpm", line=lineno, track_title=title)
                 try:
-                    bpm = int(raw_bpm) if raw_bpm else 0
+                    bpm = float(raw_bpm) if raw_bpm else 0.0
                 except ValueError:
-                    bpm = 0
+                    bpm = 0.0
 
                 raw_duration = csv_field(row, columns, LENGTH_COL)
                 if not raw_duration and "duration" in require:
@@ -79,6 +84,7 @@ def iter_tracks(
                 yield Track(
                     title=title,
                     artist=artist,
+                    album=album,
                     year=year,
                     duration=playtime,
                     bpm=bpm,

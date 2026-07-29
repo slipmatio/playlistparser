@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.2.0 (2026-07-29)
+
+- Feat: add optional parsing progress callbacks with track and byte counts.
+- Feat: report exact source track totals from Traktor headers and delimited-file pre-passes.
+- Refactor: open playlist files once per streaming pass and pass file objects to format parsers.
+
 ## 4.1.0 (2026-07-26)
 
 - Feat: add normalized album, musical key, and vendor identity fields.

@@ -75,6 +75,71 @@ def test_format_override(tmp_path: Path) -> None:
     assert len(parser.to_list()) == 4
 
 
+@pytest.mark.parametrize(("file_path", "expected_type"), ALL_FORMAT_FILES)
+def test_stream_progress(file_path: Path, expected_type: PlaylistType) -> None:
+    del expected_type
+    updates: list[tuple[int, int | None, int, int]] = []
+    parser = PlaylistParser(file_path)
+
+    tracks = list(parser.stream(on_progress=lambda *progress: updates.append(progress)))
+
+    file_size = file_path.stat().st_size
+    assert updates[0] == (0, len(tracks), 0, file_size)
+    assert updates[-1] == (len(tracks), len(tracks), file_size, file_size)
+    assert [update[0] for update in updates] == sorted(update[0] for update in updates)
+    assert [update[2] for update in updates] == sorted(update[2] for update in updates)
+    assert set(range(len(tracks) + 1)) <= {update[0] for update in updates}
+
+
+def test_stream_progress_counts_logical_csv_records(tmp_path: Path) -> None:
+    playlist = tmp_path / "multiline.csv"
+    playlist.write_text(
+        "#,Title,Artist,Length,BPM,Year,File name\n"
+        '1,"First\nTrack",Artist,60,120,2024,/music/first.mp3\n'
+        "2,Second,Artist,60,120,2024,/music/second.mp3\n",
+        encoding="utf-8",
+    )
+    updates: list[tuple[int, int | None, int, int]] = []
+
+    tracks = list(PlaylistParser(playlist).stream(on_progress=lambda *progress: updates.append(progress)))
+
+    assert len(tracks) == 2
+    assert updates[-1][:2] == (2, 2)
+
+
+def test_stream_without_progress_skips_total_prepass(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fail_prepass(*args, **kwargs):
+        del args, kwargs
+        raise AssertionError("total pre-pass should be opt-in")
+
+    monkeypatch.setattr(playlistparser_module, "source_track_total", fail_prepass)
+
+    assert len(PlaylistParser(ENGINE_FILE).to_list()) == 4
+
+
+def test_stream_opens_file_once(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = 0
+    original_open = Path.open
+
+    def counting_open(
+        path: Path,
+        mode: str = "r",
+        buffering: int = -1,
+        encoding: str | None = None,
+        errors: str | None = None,
+        newline: str | None = None,
+    ):
+        nonlocal calls
+        if path == ENGINE_FILE:
+            calls += 1
+        return original_open(path, mode, buffering, encoding, errors, newline)
+
+    monkeypatch.setattr(Path, "open", counting_open)
+
+    assert len(list(PlaylistParser(ENGINE_FILE).stream())) == 4
+    assert calls == 1
+
+
 def test_streaming_validation(tmp_path: Path) -> None:
     playlist = tmp_path / "streaming.csv"
     playlist.write_text(
@@ -97,7 +162,7 @@ def test_iteration_rereads_file(monkeypatch: pytest.MonkeyPatch) -> None:
         calls.append(1)
         yield from original_traktor_iter(*args, **kwargs)
 
-    monkeypatch.setattr(playlistparser_module, "traktor_iter", counting_iter)
+    monkeypatch.setitem(playlistparser_module.PARSERS, PlaylistType.TRAKTOR, counting_iter)
     parser = PlaylistParser(TRAKTOR_FILE)
 
     assert list(parser) == list(parser)
@@ -111,7 +176,7 @@ def test_list_cache(monkeypatch: pytest.MonkeyPatch) -> None:
         calls.append(1)
         yield from original_traktor_iter(*args, **kwargs)
 
-    monkeypatch.setattr(playlistparser_module, "traktor_iter", counting_iter)
+    monkeypatch.setitem(playlistparser_module.PARSERS, PlaylistType.TRAKTOR, counting_iter)
     parser = PlaylistParser(TRAKTOR_FILE)
 
     tracks = parser.to_list()

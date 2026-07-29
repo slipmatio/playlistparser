@@ -34,8 +34,8 @@ try:
     #
     #   require        — fail fast if any listed field is missing on a row.
     #                    If the format itself can't expose the field (e.g. Serato
-    #                    has no bpm), MissingFieldError is raised immediately,
-    #                    before any I/O.
+    #                    has no bpm), MissingFieldError is raised before track
+    #                    parsing. CSV detection reads the header first.
     #   as_type        — override format detection (use for unusual file
     #                    extensions); otherwise the format is detected from the
     #                    extension, and for .csv from the header row.
@@ -102,6 +102,25 @@ except FileNotFoundError:
     # opened on the first iteration / aggregate access.
     print("Playlist file does not exist")
 ```
+
+### Parsing progress
+
+Pass a callback to `stream()` when displaying progress:
+
+```python
+def report_progress(tracks_done, total_tracks, bytes_read, bytes_total):
+    byte_percent = bytes_read / bytes_total if bytes_total else 1
+    print(tracks_done, total_tracks, byte_percent)
+
+
+for track in PlaylistParser("set.nml").stream(on_progress=report_progress):
+    save(track)
+```
+
+Byte progress is monotonic and completes even when malformed source records are skipped. When
+available, track totals count source records, so `tracks_done` can finish below `total_tracks` when
+records are skipped. `total_tracks` is `None` when the source has no valid count, such as a Traktor
+collection without a valid `ENTRIES` value. Delimited formats count logical records in a pre-pass.
 
 ### Supported formats and fields
 

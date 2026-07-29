@@ -8,14 +8,34 @@ from playlistparser.track import Track
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+    from typing import BinaryIO
 
     from playlistparser import FieldName
 
 logger = logging.getLogger(__name__)
 
 
+def track_total(file: BinaryIO) -> int | None:
+    """Return the COLLECTION track count when the NML header provides it."""
+    context = etree.iterparse(file, events=("start",), tag="COLLECTION")
+    try:
+        for event, element in context:
+            del event
+            raw_total = element.get("ENTRIES")
+            if raw_total is None:
+                return None
+            try:
+                total = int(raw_total)
+            except ValueError:
+                return None
+            return total if total >= 0 else None
+        return None
+    finally:
+        del context
+
+
 def iter_tracks(  # noqa: C901, PLR0912, PLR0915 -- optional NML fields require many branches and statements
-    file_path: str,
+    file: BinaryIO,
     *,
     require: frozenset[FieldName] = frozenset(),
     default_artist: str = "Unknown Artist",
@@ -27,7 +47,7 @@ def iter_tracks(  # noqa: C901, PLR0912, PLR0915 -- optional NML fields require 
 
     Yields one :class:`~playlistparser.track.Track` per ENTRY.
     """
-    context = etree.iterparse(file_path, events=("end",), tag="ENTRY")
+    context = etree.iterparse(file, events=("end",), tag="ENTRY")
 
     for lineno, (event, elem) in enumerate(context, start=1):
         del event  # iterparse event string; only "end" is used here

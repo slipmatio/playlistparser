@@ -1,15 +1,14 @@
 import csv
-import io
 import logging
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from playlistparser.exceptions import MissingFieldError
 from playlistparser.track import Track
-from playlistparser.utils import csv_field, time_str_to_seconds
+from playlistparser.utils import csv_field, decoded_text, time_str_to_seconds
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+    from typing import BinaryIO
 
     from playlistparser import FieldName
 
@@ -26,7 +25,7 @@ FILE_COL = "Location"
 
 
 def iter_tracks(
-    file_path: str,
+    file: BinaryIO,
     *,
     require: frozenset[FieldName] = frozenset(),
     default_artist: str = "Unknown Artist",
@@ -39,8 +38,7 @@ def iter_tracks(
 
     Yields one :class:`~playlistparser.track.Track` per playlist row.
     """
-    with Path(file_path).open("rb") as raw:
-        text = io.TextIOWrapper(raw, encoding="utf-16", errors="replace", newline="")
+    with decoded_text(file, encoding="utf-16", errors="replace") as text:
         reader = csv.reader(text, delimiter="\t")
 
         try:

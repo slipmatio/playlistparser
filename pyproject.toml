@@ -1,7 +1,7 @@
 [project]
 name = "playlistparser"
 description = "Tool for parsing DJ software playlists"
-version = "4.1.0"
+version = "4.2.0"
 readme = "README.md"
 license = "AGPL-3.0-or-later"
 requires-python = ">=3.14"
@@ -21,7 +21,7 @@ Source = "https://github.com/slipmatio/playlistparser"
 Twitter = "https://twitter.com/uninen"
 
 [build-system]
-requires = ["uv_build>=0.11.32"]
+requires = ["uv_build>=0.12.0"]
 build-backend = "uv_build"
 
 [tool.uv.build-backend]
@@ -32,7 +32,7 @@ package = false
 exclude-newer = "1 day"
 
 [dependency-groups]
-dev = ["pytest>=9.1.1", "pytest-cov>=7.1.0", "ruff>=0.16.0", "ty>=0.0.63"]
+dev = ["pytest>=9.1.1", "pytest-cov>=7.1.0", "ruff>=0.16.0", "ty>=0.0.64"]
 
 [tool.ruff]
 line-length = 120

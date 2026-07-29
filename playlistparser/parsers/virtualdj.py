@@ -1,14 +1,14 @@
 import csv
 import logging
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from playlistparser.exceptions import MissingFieldError
 from playlistparser.track import Track
-from playlistparser.utils import csv_field, time_str_to_seconds
+from playlistparser.utils import csv_field, decoded_text, time_str_to_seconds
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+    from typing import BinaryIO
 
     from playlistparser import FieldName
 
@@ -23,7 +23,7 @@ YEAR_COL = "Year"
 
 
 def iter_tracks(
-    file_path: str,
+    file: BinaryIO,
     *,
     require: frozenset[FieldName] = frozenset(),
     default_artist: str = "Unknown Artist",
@@ -36,8 +36,8 @@ def iter_tracks(
     Yields one :class:`~playlistparser.track.Track` per playlist row.
     """
     # utf-8-sig strips the BOM so row 0 reads as plain 'sep=,'
-    with Path(file_path).open(encoding="utf-8-sig", newline="") as f:
-        reader = csv.reader(f)
+    with decoded_text(file, encoding="utf-8-sig") as text:
+        reader = csv.reader(text)
         try:
             next(reader)  # skip 'sep=,' directive row
             raw_header = next(reader)

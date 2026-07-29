@@ -29,7 +29,7 @@ jobs:
           python-version: "3.14"
 
       - name: "Install uv"
-        uses: hynek/setup-cached-uv@4300ec2180bc77d705e626a34e381b81a4772c51 # v2.5.0
+        uses: hynek/setup-cached-uv@34e35d30f1ebc7421a5cc733bca38dcc62603960 # v2.6.0
         with:
           cache-dependency-path: "**/uv.lock"
 
@@ -49,7 +49,7 @@ jobs:
           python-version: "3.14"
 
       - name: "Install uv"
-        uses: hynek/setup-cached-uv@4300ec2180bc77d705e626a34e381b81a4772c51 # v2.5.0
+        uses: hynek/setup-cached-uv@34e35d30f1ebc7421a5cc733bca38dcc62603960 # v2.6.0
         with:
           cache-dependency-path: "**/uv.lock"
 

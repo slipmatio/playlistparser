@@ -21,6 +21,26 @@ YEAR_COL = "Year"
 BPM_COL = "BPM"
 LENGTH_COL = "Length"
 FILE_COL = "File name"
+HISTORY_PATH_MARKER = "#history#"
+
+
+def resolve_history_metadata(
+    *,
+    title: str,
+    artist: str,
+    track_path: str,
+    default_artist: str,
+) -> tuple[str, str]:
+    """Recover metadata embedded in titles by Engine DJ history exports."""
+    if artist:
+        return artist, title
+
+    if HISTORY_PATH_MARKER in track_path:
+        history_artist, separator, history_title = title.partition(" - ")
+        if separator and history_artist.strip() and history_title.strip():
+            return history_artist.strip(), history_title.strip()
+
+    return default_artist, title
 
 
 def iter_tracks(
@@ -51,7 +71,13 @@ def iter_tracks(
                         raise MissingFieldError("title", line=lineno)
                     title = "Unknown"
 
-                artist = csv_field(row, columns, ARTIST_COL) or default_artist
+                track_path = csv_field(row, columns, FILE_COL)
+                artist, title = resolve_history_metadata(
+                    title=title,
+                    artist=csv_field(row, columns, ARTIST_COL),
+                    track_path=track_path,
+                    default_artist=default_artist,
+                )
 
                 album = csv_field(row, columns, ALBUM_COL)
                 if not album and "album" in require:
@@ -77,7 +103,6 @@ def iter_tracks(
                 except ValueError:
                     playtime = 0
 
-                track_path = csv_field(row, columns, FILE_COL)
                 if not track_path and "file_path" in require:
                     raise MissingFieldError("file_path", line=lineno, track_title=title)
 

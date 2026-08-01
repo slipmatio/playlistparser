@@ -1,3 +1,4 @@
+import csv
 from pathlib import Path
 
 import pytest
@@ -11,6 +12,58 @@ REKORDBOX_FILE = DATA / "rekordbox-v6.txt"
 SERATO_FILE = DATA / "serato-v25.csv"
 TRAKTOR_FILE = DATA / "traktor-v35.nml"
 VIRTUALDJ_FILE = DATA / "virtualdj-v2021.csv"
+
+
+@pytest.mark.parametrize(
+    ("title", "artist", "track_path", "expected_artist", "expected_title"),
+    [
+        (
+            "History Artist - Track - Club Mix",
+            "",
+            "/music/track.mp3.temp#history#event.temp",
+            "History Artist",
+            "Track - Club Mix",
+        ),
+        (
+            "Title containing - a separator",
+            "Tagged Artist",
+            "/music/track.mp3.temp#history#event.temp",
+            "Tagged Artist",
+            "Title containing - a separator",
+        ),
+        (
+            "Title containing - a separator",
+            "",
+            "/music/track.mp3",
+            "Fallback Artist",
+            "Title containing - a separator",
+        ),
+        (
+            "Unsplittable title",
+            "",
+            "/music/track.mp3.temp#history#event.temp",
+            "Fallback Artist",
+            "Unsplittable title",
+        ),
+    ],
+)
+def test_engine_history_metadata_resolution(
+    tmp_path: Path,
+    title: str,
+    artist: str,
+    track_path: str,
+    expected_artist: str,
+    expected_title: str,
+) -> None:
+    playlist = tmp_path / "history.csv"
+    with playlist.open("w", encoding="utf-8", newline="") as file:
+        writer = csv.writer(file)
+        writer.writerow(["#", "Title", "Artist", "Length", "BPM", "Year", "File name"])
+        writer.writerow([1, title, artist, 60, 120, 2026, track_path])
+
+    track = PlaylistParser(playlist, default_artist="Fallback Artist").to_list()[0]
+
+    assert (track.artist, track.title) == (expected_artist, expected_title)
 
 
 @pytest.mark.parametrize(

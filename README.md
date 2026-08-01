@@ -10,6 +10,42 @@ Free hosted version of this tool:
 
 `uv add playlistparser`
 
+## Command line
+
+```bash
+uvx playlistparser parse myplaylist.nml
+```
+
+```text
+1. Technotronic - Pump Up The Jam (Edit)
+2. Guru Josh - Infinity (1990s... Time for the Guru 12" Mix)
+
+Rekordbox · 2 tracks
+```
+
+`--json` gives every field of every track:
+
+```json
+{
+  "tracks": [
+    {
+      "title": "Pump Up The Jam (Edit)",
+      "artist": "Technotronic",
+      "album": "",
+      "key": "",
+      "duration": 216,
+      "year": 1989,
+      "bpm": 124.0,
+      "file_path": "",
+      "vendor_id": ""
+    }
+  ],
+  "summary": { "playlist_type": "REKORDBOX", "track_count": 1 }
+}
+```
+
+Exit code is 1 if the file can't be parsed.
+
 ## Usage
 
 One end-to-end example covering format detection, streaming, required fields,
@@ -123,6 +159,16 @@ records are skipped. `total_tracks` is `None` when the source has no valid count
 collection without a valid `ENTRIES` value. Delimited formats count logical records in a pre-pass.
 
 ### Supported formats and fields
+
+| Format    | `PlaylistType` | Extension |
+| --------- | -------------- | --------- |
+| Engine DJ | `ENGINE`       | `.csv`    |
+| Rekordbox | `REKORDBOX`    | `.txt`    |
+| Serato    | `SERATO`       | `.csv`    |
+| Traktor   | `TRAKTOR`      | `.nml`    |
+| VirtualDJ | `VIRTUALDJ`    | `.csv`    |
+
+CSV formats are detected by sniffing the header row.
 
 BPM is a float rounded to one decimal place. Traktor's `vendor_id` is its `ENTRY.AUDIO_ID`.
 

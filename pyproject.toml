@@ -1,7 +1,7 @@
 [project]
 name = "playlistparser"
 description = "Tool for parsing DJ software playlists"
-version = "4.2.0"
+version = "4.3.0"
 readme = "README.md"
 license = "AGPL-3.0-or-later"
 requires-python = ">=3.14"
@@ -13,6 +13,9 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
 ]
 dependencies = ["lxml>=6.1.1"]
+
+[project.scripts]
+playlistparser = "playlistparser.cli:main"
 
 [project.urls]
 Changelog = "https://github.com/slipmatio/playlistparser/blob/main/CHANGES.md"
@@ -28,11 +31,10 @@ build-backend = "uv_build"
 module-root = ""
 
 [tool.uv]
-package = false
 exclude-newer = "1 day"
 
 [dependency-groups]
-dev = ["pytest>=9.1.1", "pytest-cov>=7.1.0", "ruff>=0.16.0", "ty>=0.0.64"]
+dev = ["pytest>=9.1.1", "pytest-cov>=7.1.0", "ruff>=0.16.1", "ty>=0.0.65"]
 
 [tool.ruff]
 line-length = 120
@@ -147,6 +149,7 @@ max-complexity = 14
 
 [tool.ruff.lint.per-file-ignores]
 "*.ipynb" = ["E402", "I001"]
+"playlistparser/cli.py" = ["T20"] # the CLI's whole job is writing to stdout
 "tests/**/*.py" = [
     "S101",    # asserts are the whole point of tests
     "PLR2004", # magic numbers fine in test data

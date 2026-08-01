@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.3.0 (TBA)
+
+- Feat: add a `playlistparser` command line entry point — `uvx playlistparser parse FILE` prints a
+  numbered `artist - title` list and a summary. Adding `--json` outputs every parsed field of every
+  track plus a `summary` key.
+- Fix: `__version__` had drifted behind the packaged version.
+
 ## 4.2.0 (2026-07-29)
 
 - Feat: add optional parsing progress callbacks with track and byte counts.

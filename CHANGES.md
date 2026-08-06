@@ -1,5 +1,14 @@
 # Changelog
 
+## 4.4.0 (TBA)
+
+- Fix: Traktor playlists are now yielded in playlist order. Playlists without a `PLAYLIST` node
+  still fall back to collection order.
+- Fix: `require=["artist"]` now raises `MissingFieldError` in every parser.
+- Fix: a malformed `.nml` now raises `MalformedPlaylistError`.
+- Fix: Traktor progress totals count playlist entries rather than collection entries, so
+  `on_progress` no longer reports a total far larger than the number of tracks yielded.
+
 ## 4.3.0 (2026-08-01)
 
 - Feat: add a `playlistparser` command line entry point — `uvx playlistparser parse FILE` prints a

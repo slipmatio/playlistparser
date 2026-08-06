@@ -1,10 +1,12 @@
 import logging
+from functools import partial
 from typing import TYPE_CHECKING
 
-from lxml import etree  # type: ignore[import-untyped]  # ty:ignore[unresolved-import]
+from lxml import etree
 
-from playlistparser.exceptions import MissingFieldError
-from playlistparser.track import Track
+from playlistparser.exceptions import MalformedPlaylistError, MissingFieldError
+from playlistparser.track import Track, normalize_text
+from playlistparser.utils import required
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -15,26 +17,118 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def entries_count(element: etree._Element) -> int | None:
+    """Read a non-negative ENTRIES attribute, or None when it is absent or junk."""
+    raw_total = element.get("ENTRIES")
+    if raw_total is None:
+        return None
+    try:
+        total = int(raw_total)
+    except ValueError:
+        return None
+    return total if total >= 0 else None
+
+
 def track_total(file: BinaryIO) -> int | None:
-    """Return the COLLECTION track count when the NML header provides it."""
-    context = etree.iterparse(file, events=("start",), tag="COLLECTION")
+    """Return how many tracks :func:`iter_tracks` will yield, when the NML says so.
+
+    Tracks are yielded in PLAYLIST order, so the PLAYLIST entry counts are the
+    real total; COLLECTION ENTRIES is only the fallback for files without a
+    PLAYLIST node.  ENTRY subtrees are cleared as they close to keep this
+    pre-pass from building the whole document in memory.
+    """
+    context = etree.iterparse(file, events=("start", "end"), tag=("COLLECTION", "PLAYLIST", "ENTRY"))
+    collection_total: int | None = None
+    playlist_total = 0
+    playlist_seen = False
     try:
         for event, element in context:
-            del event
-            raw_total = element.get("ENTRIES")
-            if raw_total is None:
+            if element.tag == "ENTRY":
+                if event == "end":
+                    element.clear()
+                continue
+            if event != "start":
+                continue
+            if element.tag == "COLLECTION":
+                collection_total = entries_count(element)
+                continue
+            playlist_seen = True
+            total = entries_count(element)
+            if total is None:
                 return None
-            try:
-                total = int(raw_total)
-            except ValueError:
-                return None
-            return total if total >= 0 else None
+            playlist_total += total
+    except etree.XMLSyntaxError:
         return None
     finally:
         del context
+    return playlist_total if playlist_seen else collection_total
 
 
-def iter_tracks(  # noqa: C901, PLR0912, PLR0915 -- optional NML fields require many branches and statements
+def location_key(location: etree._Element) -> str:
+    """Build the ``VOLUME/:DIR/:FILE`` key that PLAYLIST PRIMARYKEYs reference."""
+    volume = location.get("VOLUME") or ""
+    directory = location.get("DIR") or ""
+    filename = location.get("FILE") or ""
+    return normalize_text(f"{volume}{directory}{filename}")
+
+
+def attribute(element: etree._Element | None, name: str) -> str:
+    """Return a stripped attribute value, tolerating a missing element."""
+    return "" if element is None else (element.get(name) or "").strip()
+
+
+def build_track(
+    elem: etree._Element,
+    entry: int,
+    require: frozenset[FieldName],
+    default_artist: str,
+) -> tuple[str, Track]:
+    """Build a Track from one COLLECTION ENTRY, plus its PRIMARYKEY lookup key."""
+    track_title = required(attribute(elem, "TITLE"), "title", require, line=entry)
+    field = partial(required, require=require, line=entry, track_title=track_title)
+
+    track_artist = field(attribute(elem, "ARTIST"), "artist") or default_artist
+    album = field(attribute(elem.find("ALBUM"), "TITLE"), "album")
+    vendor_id = field(attribute(elem, "AUDIO_ID"), "vendor_id")
+
+    meta = elem.find("INFO")
+    year = field(attribute(meta, "RELEASE_DATE"), "year")
+    key = field(attribute(meta, "KEY"), "key")
+    try:
+        playtime = int(attribute(meta, "PLAYTIME") or 0)
+    except ValueError:
+        playtime = 0
+    field(playtime, "duration")
+
+    try:
+        bpm = float(attribute(elem.find("TEMPO"), "BPM") or 0.0)
+    except ValueError:
+        bpm = 0.0
+    field(bpm, "bpm")
+
+    location = elem.find("LOCATION")
+    track_path = ""
+    primary_key = ""
+    if location is not None:
+        directory = attribute(location, "DIR").replace("/:", "/")
+        track_path = f"{directory}{location.get('FILE') or ''}"
+        primary_key = location_key(location)
+    field(track_path, "file_path")
+
+    return primary_key, Track(
+        title=track_title,
+        artist=track_artist,
+        album=album,
+        key=key,
+        year=year,
+        duration=playtime,
+        bpm=bpm,
+        file_path=track_path,
+        vendor_id=vendor_id,
+    )
+
+
+def iter_tracks(
     file: BinaryIO,
     *,
     require: frozenset[FieldName] = frozenset(),
@@ -42,96 +136,52 @@ def iter_tracks(  # noqa: C901, PLR0912, PLR0915 -- optional NML fields require 
 ) -> Iterator[Track]:
     """Traktor NML supports: title, artist, album, key, year, duration, bpm, file_path, vendor_id.
 
-    Only COLLECTION ENTRYs (those with a ``TITLE`` attribute) are processed;
-    playlist-reference ENTRYs are silently skipped.
+    COLLECTION is an unordered track database; the PLAYLIST node holds the set
+    order as PRIMARYKEY references.  Tracks are therefore yielded in PLAYLIST
+    order, which means the collection is held in memory until the PLAYLISTS
+    section is reached.  Files without a PLAYLIST node fall back to COLLECTION
+    order.
 
-    Yields one :class:`~playlistparser.track.Track` per ENTRY.
+    Yields one :class:`~playlistparser.track.Track` per playlist entry.
     """
     context = etree.iterparse(file, events=("end",), tag="ENTRY")
+    collection: dict[str, Track] = {}
+    collection_order: list[Track] = []
+    playlist_seen = False
 
-    for lineno, (event, elem) in enumerate(context, start=1):
-        del event  # iterparse event string; only "end" is used here
-        # Playlist reference entries have no TITLE attribute — skip them.
-        if "TITLE" not in elem.attrib:
-            elem.clear()
-            continue
-        try:
-            track_title = (elem.get("TITLE") or "").strip()
-            if not track_title and "title" in require:
-                raise MissingFieldError("title", line=lineno)
+    try:
+        for entry, (event, elem) in enumerate(context, start=1):
+            del event  # iterparse event string; only "end" is used here
+            primarykey = elem.find("PRIMARYKEY")
+            if primarykey is not None:
+                playlist_seen = True
+                key = normalize_text(primarykey.get("KEY") or "")
+                track = collection.get(key)
+                if track is None:
+                    logger.debug("Playlist entry %d references an unknown track: %s", entry, key)
+                else:
+                    yield track
+                elem.clear()
+                continue
 
-            track_artist = (elem.get("ARTIST") or "").strip() or default_artist
+            # Neither a collection track nor a playlist reference — skip it.
+            if "TITLE" not in elem.attrib:
+                elem.clear()
+                continue
 
-            album_meta = elem.find("ALBUM")
-            album = (album_meta.get("TITLE") or "").strip() if album_meta is not None else ""
-            if not album and "album" in require:
-                raise MissingFieldError("album", line=lineno, track_title=track_title or None)
+            try:
+                key, track = build_track(elem, entry, require, default_artist)
+            except MissingFieldError:
+                raise
+            except (AttributeError, ValueError, TypeError) as exc:
+                logger.debug("Skipping entry %d: %s", entry, exc)
+            else:
+                collection[key] = track
+                collection_order.append(track)
+            finally:
+                elem.clear()
+    except etree.XMLSyntaxError as exc:
+        raise MalformedPlaylistError(f"Invalid Traktor NML: {exc.msg}", line=exc.lineno) from exc
 
-            playtime = 0
-            year = ""
-            key = ""
-            meta = elem.find("INFO")
-            if meta is not None:
-                raw_playtime = (meta.get("PLAYTIME") or "").strip()
-                if raw_playtime:
-                    try:
-                        playtime = int(raw_playtime)
-                    except ValueError:
-                        playtime = 0
-                if playtime == 0 and "duration" in require:
-                    raise MissingFieldError("duration", line=lineno, track_title=track_title or None)
-
-                year = meta.get("RELEASE_DATE") or ""
-                if not year and "year" in require:
-                    raise MissingFieldError("year", line=lineno, track_title=track_title or None)
-
-                key = (meta.get("KEY") or "").strip()
-                if not key and "key" in require:
-                    raise MissingFieldError("key", line=lineno, track_title=track_title or None)
-            elif "duration" in require:
-                raise MissingFieldError("duration", line=lineno, track_title=track_title or None)
-            elif "year" in require:
-                raise MissingFieldError("year", line=lineno, track_title=track_title or None)
-            elif "key" in require:
-                raise MissingFieldError("key", line=lineno, track_title=track_title or None)
-
-            bpm = 0.0
-            tempometa = elem.find("TEMPO")
-            if tempometa is not None:
-                try:
-                    bpm = float(tempometa.get("BPM") or 0.0)
-                except ValueError, TypeError:
-                    bpm = 0.0
-            if bpm == 0 and "bpm" in require:
-                raise MissingFieldError("bpm", line=lineno, track_title=track_title or None)
-
-            location = elem.find("LOCATION")
-            track_path = ""
-            if location is not None:
-                directory = (location.get("DIR") or "").replace("/:", "/")
-                filename = location.get("FILE") or ""
-                track_path = f"{directory}{filename}"
-            if not track_path and "file_path" in require:
-                raise MissingFieldError("file_path", line=lineno, track_title=track_title or None)
-
-            vendor_id = (elem.get("AUDIO_ID") or "").strip()
-            if not vendor_id and "vendor_id" in require:
-                raise MissingFieldError("vendor_id", line=lineno, track_title=track_title or None)
-
-            yield Track(
-                title=track_title,
-                artist=track_artist,
-                album=album,
-                key=key,
-                year=year,
-                duration=playtime,
-                bpm=bpm,
-                file_path=track_path,
-                vendor_id=vendor_id,
-            )
-        except MissingFieldError:
-            raise
-        except (AttributeError, ValueError, TypeError) as exc:
-            logger.debug("Skipping entry %d: %s", lineno, exc)
-        finally:
-            elem.clear()
+    if not playlist_seen:
+        yield from collection_order

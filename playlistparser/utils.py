@@ -2,9 +2,13 @@ import io
 from contextlib import contextmanager
 from typing import TYPE_CHECKING
 
+from playlistparser.exceptions import MissingFieldError
+
 if TYPE_CHECKING:
     from collections.abc import Iterator
     from typing import BinaryIO
+
+    from playlistparser import FieldName
 
 
 @contextmanager
@@ -46,3 +50,17 @@ def csv_field(
     if position is None or position >= len(row):
         return default
     return row[position].strip()
+
+
+def required[T](
+    value: T,
+    field: FieldName,
+    require: frozenset[FieldName],
+    *,
+    line: int,
+    track_title: str = "",
+) -> T:
+    """Return *value*, raising MissingFieldError when it is empty and *field* was required."""
+    if not value and field in require:
+        raise MissingFieldError(field, line=line, track_title=track_title or None)
+    return value

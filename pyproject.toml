@@ -1,7 +1,7 @@
 [project]
 name = "playlistparser"
 description = "Tool for parsing DJ software playlists"
-version = "4.3.0"
+version = "4.4.0"
 readme = "README.md"
 license = "AGPL-3.0-or-later"
 requires-python = ">=3.14"
@@ -34,7 +34,13 @@ module-root = ""
 exclude-newer = "1 day"
 
 [dependency-groups]
-dev = ["pytest>=9.1.1", "pytest-cov>=7.1.0", "ruff>=0.16.1", "ty>=0.0.65"]
+dev = [
+    "lxml-stubs>=0.5.1",
+    "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.16.1",
+    "ty>=0.0.66",
+]
 
 [tool.ruff]
 line-length = 120
@@ -176,7 +182,8 @@ single-line-exclusions = ["os", "json"]
 known-first-party = ["playlistparser"]
 
 [tool.ruff.lint.pylint]
-max-args = 8
+# Track has 9 fields and its constructor mirrors them, all keyword-only.
+max-args = 9
 max-statements = 50
 max-branches = 15
 max-returns = 6

@@ -8,6 +8,10 @@
 - Fix: a malformed `.nml` now raises `MalformedPlaylistError`.
 - Fix: Traktor progress totals count playlist entries rather than collection entries, so
   `on_progress` no longer reports a total far larger than the number of tracks yielded.
+- Fix: an empty Traktor `PLAYLIST` node now yields no tracks instead of falling back to the whole
+  `COLLECTION`.
+- Fix: `require=[...]` is applied to the tracks a Traktor playlist actually selects; an unreferenced
+  library track missing a required field no longer aborts the parse.
 
 ## 4.3.0 (2026-08-01)
 

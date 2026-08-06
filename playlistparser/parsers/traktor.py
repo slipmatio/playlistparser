@@ -77,6 +77,12 @@ def attribute(element: etree._Element | None, name: str) -> str:
     return "" if element is None else (element.get(name) or "").strip()
 
 
+def entry_key(elem: etree._Element) -> str:
+    """Return the PRIMARYKEY lookup key of a COLLECTION ENTRY, without building the Track."""
+    location = elem.find("LOCATION")
+    return "" if location is None else location_key(location)
+
+
 def build_track(
     elem: etree._Element,
     entry: int,
@@ -142,23 +148,36 @@ def iter_tracks(
     section is reached.  Files without a PLAYLIST node fall back to COLLECTION
     order.
 
+    A collection track is only validated against *require* once the playlist
+    selects it, so an unrelated library track missing a required field cannot
+    abort the parse.
+
     Yields one :class:`~playlistparser.track.Track` per playlist entry.
     """
-    context = etree.iterparse(file, events=("end",), tag="ENTRY")
-    collection: dict[str, Track] = {}
-    collection_order: list[Track] = []
+    context = etree.iterparse(file, events=("end",), tag=("ENTRY", "PLAYLIST"))
+    collection: dict[str, Track | MissingFieldError] = {}
+    collection_order: list[Track | MissingFieldError] = []
     playlist_seen = False
+    entry = 0
 
     try:
-        for entry, (event, elem) in enumerate(context, start=1):
+        for event, elem in context:
             del event  # iterparse event string; only "end" is used here
+            if elem.tag == "PLAYLIST":
+                # Even an empty PLAYLIST is a selection: the collection is not a fallback for it.
+                playlist_seen = True
+                elem.clear()
+                continue
+
+            entry += 1
             primarykey = elem.find("PRIMARYKEY")
             if primarykey is not None:
-                playlist_seen = True
                 key = normalize_text(primarykey.get("KEY") or "")
                 track = collection.get(key)
                 if track is None:
-                    logger.debug("Playlist entry %d references an unknown track: %s", entry, key)
+                    logger.warning("Playlist entry %d references an unknown track: %s", entry, key)
+                elif isinstance(track, MissingFieldError):
+                    raise track
                 else:
                     yield track
                 elem.clear()
@@ -171,17 +190,21 @@ def iter_tracks(
 
             try:
                 key, track = build_track(elem, entry, require, default_artist)
-            except MissingFieldError:
-                raise
+            except MissingFieldError as exc:
+                # Held back: a missing field only matters once the playlist selects this track.
+                key, track = entry_key(elem), exc
             except (AttributeError, ValueError, TypeError) as exc:
                 logger.debug("Skipping entry %d: %s", entry, exc)
-            else:
-                collection[key] = track
-                collection_order.append(track)
-            finally:
                 elem.clear()
+                continue
+            collection[key] = track
+            collection_order.append(track)
+            elem.clear()
     except etree.XMLSyntaxError as exc:
         raise MalformedPlaylistError(f"Invalid Traktor NML: {exc.msg}", line=exc.lineno) from exc
 
     if not playlist_seen:
-        yield from collection_order
+        for track in collection_order:
+            if isinstance(track, MissingFieldError):
+                raise track
+            yield track

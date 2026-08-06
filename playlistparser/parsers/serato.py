@@ -1,10 +1,11 @@
 import csv
 import logging
+from functools import partial
 from typing import TYPE_CHECKING
 
 from playlistparser.exceptions import MissingFieldError
 from playlistparser.track import Track
-from playlistparser.utils import csv_field, decoded_text
+from playlistparser.utils import csv_field, decoded_text, required
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -50,18 +51,11 @@ def iter_tracks(
                 continue
 
             try:
-                title = csv_field(row, columns, NAME_COL)
-                if not title and "title" in require:
-                    raise MissingFieldError("title", line=lineno)
+                title = required(csv_field(row, columns, NAME_COL), "title", require, line=lineno)
+                field = partial(required, require=require, line=lineno, track_title=title)
 
-                artist = csv_field(row, columns, ARTIST_COL)
-                if not artist and "artist" in require:
-                    raise MissingFieldError("artist", line=lineno, track_title=title or None)
-                artist = artist or default_artist
-
-                year = csv_field(row, columns, YEAR_COL)
-                if not year and "year" in require:
-                    raise MissingFieldError("year", line=lineno, track_title=title or None)
+                artist = field(csv_field(row, columns, ARTIST_COL), "artist") or default_artist
+                year = field(csv_field(row, columns, YEAR_COL), "year")
 
                 yield Track(title=title, artist=artist, year=year)
             except MissingFieldError:

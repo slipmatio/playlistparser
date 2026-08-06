@@ -48,9 +48,6 @@ Exit code is 1 if the file can't be parsed.
 
 ## Usage
 
-One end-to-end example covering format detection, streaming, required fields,
-aggregates, per-track data and every exception you need to handle:
-
 ```python
 import logging
 
@@ -66,82 +63,65 @@ from playlistparser import (
 logging.basicConfig(level=logging.INFO)
 
 try:
-    # Construct a parser. All keyword arguments are optional.
+    # Every keyword argument is optional.
     #
-    #   require        — fail fast if any listed field is missing on a row.
-    #                    If the format itself can't expose the field (e.g. Serato
-    #                    has no bpm), MissingFieldError is raised before track
-    #                    parsing. CSV detection reads the header first.
-    #   as_type        — override format detection (use for unusual file
-    #                    extensions); otherwise the format is detected from the
-    #                    extension, and for .csv from the header row.
-    #   default_artist — substituted when a row has no artist field.
+    #   require        — raise MissingFieldError when a listed field is missing from a
+    #                    row. Fields the format cannot expose at all (Serato has no bpm)
+    #                    raise before parsing starts; CSV detection reads the header first.
+    #   as_type        — bypass detection, which otherwise uses the file extension and,
+    #                    for .csv, the header row.
+    #   default_artist — substituted for a missing artist, unless "artist" is in require.
     #
-    # Recoverable per-row warnings are emitted via stdlib `logging` under the
-    # `playlistparser.parsers.*` logger names — configure logging at the root
-    # (or route through structlog with `structlog.stdlib.LoggerFactory()`).
+    # Recoverable per-row warnings go to the `playlistparser.parsers.*` stdlib loggers
+    # (route through structlog with `structlog.stdlib.LoggerFactory()`).
     pl = PlaylistParser(
         "history.csv",
         require=["title", "artist"],
         default_artist="Unknown Artist",
-        # as_type=PlaylistType.ENGINE,  # uncomment to bypass detection
+        # as_type=PlaylistType.ENGINE,
     )
 
-    # Detected format (PlaylistType enum: ENGINE, REKORDBOX, SERATO,
-    # TRAKTOR, VIRTUALDJ). For .csv this triggers a one-time header sniff.
+    # ENGINE, REKORDBOX, SERATO, TRAKTOR or VIRTUALDJ. For .csv, a one-time header sniff.
     print(f"Format: {pl.playlist_type.name}")
 
-    # Stream tracks. Iteration is lazy — each pass re-reads the file unless
-    # you materialise with .to_list() (cached for the lifetime of the parser).
+    # Lazy — every pass re-reads the file.
     for track in pl:
-        # str(track) → "Artist - Title"
-        print(track)
+        print(track)  # "Artist - Title"
 
-        # Track is a frozen dataclass with these fields (all always present;
-        # unsupported / missing values are 0 or ""):
-        #   title: str, artist: str, album: str, key: str
+        # Frozen dataclass; every field is always present, missing values are 0 or "".
+        #   title, artist, album, key, file_path, vendor_id: str
         #   duration: int (seconds), year: int, bpm: float
-        #   file_path: str, vendor_id: str
-        print(track.bpm, track.year, track.duration_str())  # e.g. "128.0 2024 6:42"
+        print(track.bpm, track.year, track.duration_str())  # "128.0 2024 6:42"
 
-        # Serialise for JSON / DB. no_meta=True keeps only title + artist.
-        payload = track.as_dict()
+        payload = track.as_dict()  # no_meta=True keeps only title and artist
 
-    # Aggregates materialise the full list once and cache it.
+    # Materialise once; cached for the parser's lifetime.
     print(f"{pl.track_count} tracks, {pl.total_duration}s total")
-
-    # Explicit materialisation if you need the list directly.
     tracks = pl.to_list()
 
 except UnknownFormatError as e:
-    # Extension not recognised, or CSV header didn't match any known format.
-    # Pass as_type=PlaylistType.X to override.
+    # Extension unrecognised, or a CSV header matching no known format. Override with as_type.
     print(f"Unsupported file: {e}")
 
 except MissingFieldError as e:
-    # A required field was missing — either unsupported by the format
-    # (raised before parsing) or absent on a specific row.
-    # e.field, e.line, e.track_title are available for diagnostics.
     print(f"Missing '{e.field}' on line {e.line}: {e.track_title!r}")
 
 except MalformedPlaylistError as e:
-    # Structural problem with the file (bad XML, truncated row, etc).
-    # e.path and e.line locate the problem.
+    # Bad XML, truncated row. e.path and e.line locate it.
     print(f"Corrupt playlist: {e}")
 
 except PlaylistParserError as e:
-    # Base class — catch this if you don't care which of the above fired.
+    # Base class for all of the above.
     print(f"Could not parse playlist: {e}")
 
 except FileNotFoundError:
-    # The library does not check existence in the constructor; the file is
-    # opened on the first iteration / aggregate access.
+    # Nothing is opened until the first iteration or aggregate access.
     print("Playlist file does not exist")
 ```
 
 ### Parsing progress
 
-Pass a callback to `stream()` when displaying progress:
+Pass a callback to `stream()`:
 
 ```python
 def report_progress(tracks_done, total_tracks, bytes_read, bytes_total):
@@ -153,10 +133,11 @@ for track in PlaylistParser("set.nml").stream(on_progress=report_progress):
     save(track)
 ```
 
-Byte progress is monotonic and completes even when malformed source records are skipped. When
-available, track totals count source records, so `tracks_done` can finish below `total_tracks` when
-records are skipped. `total_tracks` is `None` when the source has no valid count, such as a Traktor
-collection without a valid `ENTRIES` value. Delimited formats count logical records in a pre-pass.
+Byte progress is monotonic and completes even when malformed source records are skipped. Track
+totals count source records, so `tracks_done` can finish below `total_tracks`. Traktor totals come
+from the `PLAYLIST` entry counts, falling back to `COLLECTION` for files with no playlist node;
+delimited formats count logical records in a pre-pass. `total_tracks` is `None` when the source
+exposes no valid count.
 
 ### Supported formats and fields
 
@@ -169,6 +150,9 @@ collection without a valid `ENTRIES` value. Delimited formats count logical reco
 | VirtualDJ | `VIRTUALDJ`    | `.csv`    |
 
 CSV formats are detected by sniffing the header row.
+
+Tracks are yielded in playlist order. For Traktor that is the `PLAYLIST` node's `PRIMARYKEY` order,
+not the unordered `COLLECTION`; an `.nml` with no `PLAYLIST` node falls back to collection order.
 
 BPM is a float rounded to one decimal place. Traktor's `vendor_id` is its `ENTRY.AUDIO_ID`.
 

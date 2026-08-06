@@ -1,10 +1,11 @@
 import csv
 import logging
+from functools import partial
 from typing import TYPE_CHECKING
 
 from playlistparser.exceptions import MissingFieldError
 from playlistparser.track import Track
-from playlistparser.utils import csv_field, decoded_text, time_str_to_seconds
+from playlistparser.utils import csv_field, decoded_text, required, time_str_to_seconds
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -49,35 +50,26 @@ def iter_tracks(
 
         for lineno, row in enumerate(reader, start=3):
             try:
-                title = csv_field(row, columns, TITLE_COL)
-                if not title and "title" in require:
-                    raise MissingFieldError("title", line=lineno)
+                title = required(csv_field(row, columns, TITLE_COL), "title", require, line=lineno)
+                field = partial(required, require=require, line=lineno, track_title=title)
 
-                artist = csv_field(row, columns, ARTIST_COL) or default_artist
+                artist = field(csv_field(row, columns, ARTIST_COL), "artist") or default_artist
+                key = field(csv_field(row, columns, KEY_COL), "key")
+                year = field(csv_field(row, columns, YEAR_COL), "year")
 
                 raw_length = csv_field(row, columns, LENGTH_COL)
                 try:
                     playtime = time_str_to_seconds(raw_length) if raw_length else 0
                 except ValueError, AttributeError:
                     playtime = 0
-                if playtime == 0 and "duration" in require:
-                    raise MissingFieldError("duration", line=lineno, track_title=title or None)
+                field(playtime, "duration")
 
                 raw_bpm = csv_field(row, columns, BPM_COL)
                 try:
                     bpm = float(raw_bpm) if raw_bpm else 0.0
                 except ValueError, AttributeError:
                     bpm = 0.0
-                if bpm == 0 and "bpm" in require:
-                    raise MissingFieldError("bpm", line=lineno, track_title=title or None)
-
-                key = csv_field(row, columns, KEY_COL)
-                if not key and "key" in require:
-                    raise MissingFieldError("key", line=lineno, track_title=title or None)
-
-                year = csv_field(row, columns, YEAR_COL)
-                if not year and "year" in require:
-                    raise MissingFieldError("year", line=lineno, track_title=title or None)
+                field(bpm, "bpm")
 
                 yield Track(title=title, artist=artist, key=key, year=year, duration=playtime, bpm=bpm)
             except MissingFieldError:

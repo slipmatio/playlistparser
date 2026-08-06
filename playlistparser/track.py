@@ -45,7 +45,7 @@ class Track:
     file_path: str
     vendor_id: str
 
-    def __init__(  # noqa: PLR0913 -- keyword-only arguments mirror the stable Track data model
+    def __init__(
         self,
         *,
         title: str,

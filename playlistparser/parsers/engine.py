@@ -1,10 +1,11 @@
 import csv
 import logging
+from functools import partial
 from typing import TYPE_CHECKING
 
 from playlistparser.exceptions import MissingFieldError
 from playlistparser.track import Track
-from playlistparser.utils import csv_field, decoded_text
+from playlistparser.utils import csv_field, decoded_text, required
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -29,9 +30,12 @@ def resolve_history_metadata(
     title: str,
     artist: str,
     track_path: str,
-    default_artist: str,
 ) -> tuple[str, str]:
-    """Recover metadata embedded in titles by Engine DJ history exports."""
+    """Recover metadata embedded in titles by Engine DJ history exports.
+
+    Returns an empty artist when none could be recovered, so the caller can
+    tell a genuinely missing artist from a defaulted one.
+    """
     if artist:
         return artist, title
 
@@ -40,7 +44,7 @@ def resolve_history_metadata(
         if separator and history_artist.strip() and history_title.strip():
             return history_artist.strip(), history_title.strip()
 
-    return default_artist, title
+    return "", title
 
 
 def iter_tracks(
@@ -65,46 +69,32 @@ def iter_tracks(
 
         for lineno, row in enumerate(reader, start=2):
             try:
-                title = csv_field(row, columns, TITLE_COL)
-                if not title:
-                    if "title" in require:
-                        raise MissingFieldError("title", line=lineno)
-                    title = "Unknown"
+                title = required(csv_field(row, columns, TITLE_COL), "title", require, line=lineno) or "Unknown"
 
                 track_path = csv_field(row, columns, FILE_COL)
                 artist, title = resolve_history_metadata(
                     title=title,
                     artist=csv_field(row, columns, ARTIST_COL),
                     track_path=track_path,
-                    default_artist=default_artist,
                 )
+                field = partial(required, require=require, line=lineno, track_title=title)
 
-                album = csv_field(row, columns, ALBUM_COL)
-                if not album and "album" in require:
-                    raise MissingFieldError("album", line=lineno, track_title=title)
+                artist = field(artist, "artist") or default_artist
+                album = field(csv_field(row, columns, ALBUM_COL), "album")
+                year = field(csv_field(row, columns, YEAR_COL), "year")
+                field(track_path, "file_path")
 
-                year = csv_field(row, columns, YEAR_COL)
-                if not year and "year" in require:
-                    raise MissingFieldError("year", line=lineno, track_title=title)
-
-                raw_bpm = csv_field(row, columns, BPM_COL)
-                if not raw_bpm and "bpm" in require:
-                    raise MissingFieldError("bpm", line=lineno, track_title=title)
+                raw_bpm = field(csv_field(row, columns, BPM_COL), "bpm")
                 try:
                     bpm = float(raw_bpm) if raw_bpm else 0.0
                 except ValueError:
                     bpm = 0.0
 
-                raw_duration = csv_field(row, columns, LENGTH_COL)
-                if not raw_duration and "duration" in require:
-                    raise MissingFieldError("duration", line=lineno, track_title=title)
+                raw_duration = field(csv_field(row, columns, LENGTH_COL), "duration")
                 try:
                     playtime = int(raw_duration) if raw_duration else 0
                 except ValueError:
                     playtime = 0
-
-                if not track_path and "file_path" in require:
-                    raise MissingFieldError("file_path", line=lineno, track_title=title)
 
                 yield Track(
                     title=title,

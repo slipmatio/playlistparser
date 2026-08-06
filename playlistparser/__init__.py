@@ -168,7 +168,7 @@ class PlaylistParser:
     ) -> None:
         self.path = Path(file_path)
         self.default_artist = default_artist
-        self.require: frozenset[FieldName] = frozenset(require)  # type: ignore[arg-type]
+        self.require: frozenset[FieldName] = frozenset(require)
         self.resolved_type: PlaylistType | None = as_type
         self.cached_tracks: list[Track] | None = None
 
@@ -224,6 +224,13 @@ class PlaylistParser:
         if unsupported:
             raise MissingFieldError(min(unsupported))
 
+    def located(self, tracks: Iterator[Track]) -> Iterator[Track]:
+        """Re-raise parser structural errors with the playlist path attached."""
+        try:
+            yield from tracks
+        except MalformedPlaylistError as error:
+            raise MalformedPlaylistError(str(error), path=self.path, line=error.line) from error
+
     def stream(self, *, on_progress: ProgressCallback | None = None) -> Iterator[Track]:
         """Yield tracks and optionally report source and output progress."""
         detected_type = self.resolved_type
@@ -246,10 +253,12 @@ class PlaylistParser:
             if on_progress is None:
                 source.seek(0)
                 with io.BufferedReader(source) as buffered:
-                    yield from parser_function(
-                        buffered,
-                        require=self.require,
-                        default_artist=self.default_artist,
+                    yield from self.located(
+                        parser_function(
+                            buffered,
+                            require=self.require,
+                            default_artist=self.default_artist,
+                        ),
                     )
                 return
 
@@ -273,10 +282,12 @@ class PlaylistParser:
             emit_progress(0)
             counting_reader = CountingReader(source, emit_progress)
             with io.BufferedReader(counting_reader) as buffered:
-                for track in parser_function(
-                    buffered,
-                    require=self.require,
-                    default_artist=self.default_artist,
+                for track in self.located(
+                    parser_function(
+                        buffered,
+                        require=self.require,
+                        default_artist=self.default_artist,
+                    ),
                 ):
                     tracks_done += 1
                     emit_progress(counting_reader.bytes_read)
@@ -296,4 +307,4 @@ __all__ = [
     "UnknownFormatError",
 ]
 
-__version__ = "4.3.0"
+__version__ = "4.4.0"

@@ -12,7 +12,7 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.14",
 ]
-dependencies = ["lxml>=6.1.1"]
+dependencies = ["lxml>=6.1.2"]
 
 [project.scripts]
 playlistparser = "playlistparser.cli:main"
@@ -39,7 +39,7 @@ dev = [
     "pytest>=9.1.1",
     "pytest-cov>=7.1.0",
     "ruff>=0.16.3",
-    "ty>=0.0.72",
+    "ty>=0.0.73",
 ]
 
 [tool.ruff]

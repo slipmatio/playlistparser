@@ -24,7 +24,7 @@ Source = "https://github.com/slipmatio/playlistparser"
 Twitter = "https://twitter.com/uninen"
 
 [build-system]
-requires = ["uv_build>=0.12.6"]
+requires = ["uv_build>=0.12.7"]
 build-backend = "uv_build"
 
 [tool.uv.build-backend]
@@ -38,7 +38,7 @@ dev = [
     "lxml-stubs>=0.5.1",
     "pytest>=9.1.1",
     "pytest-cov>=7.1.0",
-    "ruff>=0.16.4",
+    "ruff>=0.16.5",
     "ty>=0.0.75",
 ]
 

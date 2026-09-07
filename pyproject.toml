@@ -12,7 +12,7 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.14",
 ]
-dependencies = ["lxml>=6.1.2"]
+dependencies = ["lxml>=6.1.3"]
 
 [project.scripts]
 playlistparser = "playlistparser.cli:main"
@@ -24,7 +24,7 @@ Source = "https://github.com/slipmatio/playlistparser"
 Twitter = "https://twitter.com/uninen"
 
 [build-system]
-requires = ["uv_build>=0.12.7"]
+requires = ["uv_build>=0.12.9"]
 build-backend = "uv_build"
 
 [tool.uv.build-backend]
@@ -38,8 +38,8 @@ dev = [
     "lxml-stubs>=0.5.1",
     "pytest>=9.1.1",
     "pytest-cov>=7.1.0",
-    "ruff>=0.16.5",
-    "ty>=0.0.75",
+    "ruff>=0.16.6",
+    "ty>=0.0.78",
 ]
 
 [tool.ruff]

@@ -5,7 +5,13 @@ import pytest
 
 import playlistparser as playlistparser_module
 import playlistparser.parsers.engine as engine_parser
-from playlistparser import MissingFieldError, PlaylistParser, PlaylistType, UnknownFormatError
+from playlistparser import (
+    MissingFieldError,
+    PlaylistParser,
+    PlaylistType,
+    ProgressCallback,
+    UnknownFormatError,
+)
 from playlistparser.parsers.traktor import iter_tracks as original_traktor_iter
 from playlistparser.utils import time_str_to_seconds
 
@@ -57,6 +63,15 @@ def test_detect_format_unknown() -> None:
     assert ".txt" in message
     assert ".csv" in message
     assert "as_type=" in message
+
+
+@pytest.mark.parametrize("on_progress", [None, lambda *progress: None])
+def test_plain_text_file_is_not_a_rekordbox_export(tmp_path: Path, on_progress: ProgressCallback | None) -> None:
+    playlist = tmp_path / "tracklist.txt"
+    playlist.write_text("Povo - Uam Uam\r\nSoel - Le Vicomte\r\n", encoding="utf-8")
+
+    with pytest.raises(UnknownFormatError):
+        list(PlaylistParser(playlist).stream(on_progress=on_progress))
 
 
 def test_default_artist() -> None:

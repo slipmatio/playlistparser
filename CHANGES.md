@@ -1,6 +1,12 @@
 # Changelog
 
-## 4.4.0 (TBA)
+## 4.4.1 (TBA)
+
+- Fix: a file whose bytes do not decode as its detected format now raises `UnknownFormatError`
+  instead of `UnicodeDecodeError`. A plain text track list named `.txt` was treated as a Rekordbox
+  export and crashed on the missing UTF-16 byte order mark.
+
+## 4.4.0 (2026-08-06)
 
 - Fix: Traktor playlists are now yielded in playlist order. Playlists without a `PLAYLIST` node
   still fall back to collection order.

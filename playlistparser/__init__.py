@@ -230,6 +230,11 @@ class PlaylistParser:
             yield from tracks
         except MalformedPlaylistError as error:
             raise MalformedPlaylistError(str(error), path=self.path, line=error.line) from error
+        except UnicodeDecodeError as error:
+            # Bytes that do not decode as the detected format's encoding mean the extension
+            # lied about the format, so report a detection failure instead of leaking a codec
+            # error to the caller.
+            raise UnknownFormatError(self.path) from error
 
     def stream(self, *, on_progress: ProgressCallback | None = None) -> Iterator[Track]:
         """Yield tracks and optionally report source and output progress."""
@@ -264,7 +269,10 @@ class PlaylistParser:
 
             bytes_total = source.seek(0, io.SEEK_END)
             source.seek(0)
-            total_tracks = source_track_total(source, detected_type)
+            try:
+                total_tracks = source_track_total(source, detected_type)
+            except UnicodeDecodeError as error:
+                raise UnknownFormatError(self.path) from error
             source.seek(0)
 
             tracks_done = 0
@@ -307,4 +315,4 @@ __all__ = [
     "UnknownFormatError",
 ]
 
-__version__ = "4.4.0"
+__version__ = "4.4.1"

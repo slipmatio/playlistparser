@@ -1,7 +1,7 @@
 [project]
 name = "playlistparser"
 description = "Tool for parsing DJ software playlists"
-version = "4.4.0"
+version = "4.4.1"
 readme = "README.md"
 license = "AGPL-3.0-or-later"
 requires-python = ">=3.14"
@@ -39,7 +39,7 @@ dev = [
     "pytest>=9.1.1",
     "pytest-cov>=7.1.0",
     "ruff>=0.16.6",
-    "ty>=0.0.78",
+    "ty>=0.0.79",
 ]
 
 [tool.ruff]
